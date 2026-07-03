@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum PathwayStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum MessageRole {
+  ASSISTANT
+  CAREGIVER
+  SYSTEM
+}
+
+model User {
+  id        String    @id @default(uuid())
+  fullName  String
+  email     String    @unique
+  password  String
+  patients  Patient[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Patient {
+  id                      String               @id @default(uuid())
+  caregiverId             String
+  caregiver               User                 @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  fullName                String
+  age                     Int
+  gender                  String
+  location                String?
+  relationshipToCaregiver String
+  onboardingSessions      OnboardingSession[]
+  pathways                PatientPathway[]
+  riskProfiles            RiskProfile[]
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+
+  @@index([caregiverId])
+  @@map("patients")
+}
+
+model OnboardingSession {
+  id          String              @id @default(uuid())
+  patientId   String
+  patient     Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  status      SessionStatus       @default(IN_PROGRESS)
+  messages    OnboardingMessage[]
+  startedAt   DateTime            @default(now())
+  completedAt DateTime?
+
+  @@index([patientId])
+  @@map("onboarding_sessions")
+}
+
+model OnboardingMessage {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   OnboardingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      MessageRole
+  content   String
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  @@index([sessionId])
+  @@map("onboarding_messages")
+}
+
+// Centralized pathway registry, persisted so it can be inspected/edited
+// without code changes. Source of truth at boot time is
+// src/modules/discovery/rulesEngine/pathways.config.js, loaded by the seed script.
+model ClinicalPathway {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  description   String
+  configuration Json
+  createdAt     DateTime @default(now())
+
+  @@map("clinical_pathways")
+}
+
+model PatientPathway {
+  id          String        @id @default(uuid())
+  patientId   String
+  patient     Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  pathwayName String
+  status      PathwayStatus @default(ACTIVE)
+  data        Json          @default("{}")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([patientId, pathwayName])
+  @@index([patientId])
+  @@map("patient_pathways")
+}
+
+model RiskProfile {
+  id        String   @id @default(uuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  riskData  Json
+  summary   String
+  createdAt DateTime @default(now())
+
+  @@index([patientId])
+  @@map("risk_profiles")
+}

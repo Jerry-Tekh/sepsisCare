@@ -1,0 +1,69 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.label {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Wrapper for icon / suffix adornments */
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Left icon */
+.inputIcon {
+  position: absolute;
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Right suffix (e.g. show/hide button) */
+.inputSuffix {
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Base input */
+.input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 16px;   /* 16px prevents iOS Safari zoom on focus */
+  outline: none;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 166, 0.12);
+}
+
+/* Padding adjustments when adornments are present */
+.withIcon   { padding-left: 2.4rem;  }
+.withSuffix { padding-right: 2.4rem; }
+
+.inputError { border-color: var(--color-danger); }
+.inputError:focus { box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12); }
+
+.errorText {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+}

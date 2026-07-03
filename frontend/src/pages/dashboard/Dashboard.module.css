@@ -1,0 +1,94 @@
+.pageHeader { margin-bottom: 1.5rem; }
+.subtitle   { color: var(--color-text-muted); margin: 0; font-size: 0.92rem; }
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Stat card */
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.statIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+/* Tone colours */
+.blue   .statIcon { background:#e8f0fa; color: var(--color-primary); }
+.orange .statIcon { background:#fff3e6; color: #c0641a; }
+.green  .statIcon { background:#e6f4ea; color: var(--color-success); }
+
+.statValue {
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin: 0.3rem 0 0;
+}
+
+/* CTA actions row */
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.2rem;
+  border-radius: var(--radius);
+  background-color: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+.cta:hover { background-color: var(--color-primary-dark); color: #fff; }
+
+.ctaSecondary {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.ctaSecondary:hover { background-color: var(--color-bg); color: var(--color-text); }
+
+.center { display:flex; justify-content:center; padding: 2rem 0; }
+.error  { color: var(--color-danger); }
+
+/* Tablet */
+@media (max-width: 768px) {
+  .statsGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .statsGrid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .actions   { flex-direction: column; }
+  .cta       { justify-content: center; }
+}

@@ -1,0 +1,36 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.92rem;
+  min-width: 80px;
+  white-space: nowrap;
+  line-height: 1;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnIcon { display: flex; align-items: center; font-size: 1em; }
+
+.primary { background-color: var(--color-primary); color: #fff; }
+.primary:hover:not(:disabled) { background-color: var(--color-primary-dark); }
+
+.secondary { background-color: transparent; border-color: var(--color-border); color: var(--color-text); }
+.secondary:hover:not(:disabled) { background-color: var(--color-bg); }
+
+.danger { background-color: var(--color-danger); color: #fff; }
+.danger:hover:not(:disabled) { opacity: 0.88; }
+
+.fullWidth { width: 100%; }
+
+@media (max-width: 480px) {
+  .button { font-size: 0.88rem; padding: 0.55rem 1rem; }
+}
