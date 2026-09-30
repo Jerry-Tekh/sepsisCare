@@ -2,31 +2,36 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle,
-  FiUser, FiClipboard, FiActivity, FiMessageSquare,
+  FiUser, FiClipboard, FiMessageSquare,
+  FiBookOpen, FiHelpCircle,
 } from "react-icons/fi";
-import { RiFirstAidKitLine } from "react-icons/ri";
+import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import Badge from "../../components/common/Badge.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
 import ConversationHistory from "../../components/discovery/ConversationHistory.jsx";
-import * as patientApi  from "../../api/patientApi";
-import * as discoveryApi from "../../api/discoveryApi";
-import * as riskApi      from "../../api/riskApi";
+import * as patientApi      from "../../api/patientApi";
+import * as discoveryApi    from "../../api/discoveryApi";
+import * as riskApi         from "../../api/riskApi";
+import * as safetyQueryApi  from "../../api/safetyQueryApi";
+import * as microlearningApi from "../../api/microlearningApi";
 import styles from "./PatientProfile.module.css";
 
 export default function PatientProfile() {
   const { id }   = useParams();
   const navigate = useNavigate();
 
-  const [patient,       setPatient]       = useState(null);
-  const [activeSession, setActiveSession] = useState(null);
-  const [riskProfile,   setRiskProfile]   = useState(null);
-  const [sessions,      setSessions]      = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState("");
-  const [starting,      setStarting]      = useState(false);
+  const [patient,         setPatient]         = useState(null);
+  const [activeSession,   setActiveSession]   = useState(null);
+  const [riskProfile,     setRiskProfile]     = useState(null);
+  const [sessions,        setSessions]        = useState([]);
+  const [safetyQueries,   setSafetyQueries]   = useState([]);
+  const [materials,       setMaterials]       = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState("");
+  const [starting,        setStarting]        = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,15 +39,19 @@ export default function PatientProfile() {
     async function load() {
       setLoading(true);
       try {
-        const [patRes, sesRes, listRes] = await Promise.all([
+        const [patientRes, sesRes, sessionsListRes, sqRes, mlRes] = await Promise.all([
           patientApi.getPatient(id),
           discoveryApi.getActiveOnboardingSession(id),
           discoveryApi.listOnboardingSessions(id),
+          safetyQueryApi.listQueries(id),
+          microlearningApi.listMaterials(id),
         ]);
         if (cancelled) return;
-        setPatient(patRes.data.patient);
+        setPatient(patientRes.data.patient);
         setActiveSession(sesRes.data.session);
-        setSessions(listRes.data.sessions);
+        setSessions(sessionsListRes.data.sessions);
+        setSafetyQueries(sqRes.data.queries);
+        setMaterials(mlRes.data.materials);
 
         try {
           const riskRes = await riskApi.getLatestRiskProfile(id);
@@ -188,6 +197,57 @@ export default function PatientProfile() {
       {/* Conversation history */}
       <Card title="Conversation History" icon={<FiMessageSquare />}>
         <ConversationHistory sessions={sessions} />
+      </Card>
+
+      {/* Safety Query */}
+      <Card title="Safety Query" icon={<RiQuestionAnswerLine />}>
+        <div className={styles.featureRow}>
+          <div className={styles.featureInfo}>
+            <p className={styles.featureDesc}>
+              Ask the AI any question about safe care for {patient?.fullName}. The AI knows their full risk profile and will alert you immediately if it detects a red flag.
+            </p>
+            {safetyQueries.length > 0 && (
+              <p className={styles.featureMeta}>
+                {safetyQueries.length} past {safetyQueries.length === 1 ? "query" : "queries"}
+                {safetyQueries.some((q) => q.status === "RED_FLAG_TRIGGERED") && (
+                  <span className={styles.redFlagNote}>
+                    <FiAlertTriangle size={12} /> Red flag on record
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          <Button
+            icon={<FiHelpCircle size={15} />}
+            onClick={() => navigate(`/patients/${id}/safety-query`)}
+          >
+            {safetyQueries.length > 0 ? "Open safety chat" : "Start asking"}
+          </Button>
+        </div>
+      </Card>
+
+      {/* Microlearning */}
+      <Card title="Care Guides" icon={<FiBookOpen />}>
+        <div className={styles.featureRow}>
+          <div className={styles.featureInfo}>
+            <p className={styles.featureDesc}>
+              Patient-specific care guides covering wound care, infection prevention, nutrition, and more. Guides are auto-generated from the risk assessment and can be downloaded as PDFs or printable picture cards.
+            </p>
+            {materials.length > 0 && (
+              <p className={styles.featureMeta}>
+                {materials.filter((m) => m.isAssigned).length} in care plan
+                &nbsp;·&nbsp;
+                {materials.length} total {materials.length === 1 ? "guide" : "guides"}
+              </p>
+            )}
+          </div>
+          <Button
+            icon={<FiBookOpen size={15} />}
+            onClick={() => navigate(`/patients/${id}/microlearning`)}
+          >
+            {materials.length > 0 ? "View guides" : "Explore library"}
+          </Button>
+        </div>
       </Card>
     </AppLayout>
   );

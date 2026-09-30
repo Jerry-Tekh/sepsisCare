@@ -28,7 +28,8 @@ model User {
   fullName  String
   email     String    @unique
   password  String
-  patients  Patient[]
+  patients       Patient[]
+  safetyQueries  SafetyQuery[]  @relation("UserSafetyQueries")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -47,6 +48,8 @@ model Patient {
   onboardingSessions      OnboardingSession[]
   pathways                PatientPathway[]
   riskProfiles            RiskProfile[]
+  safetyQueries           SafetyQuery[]
+  microlearningMaterials  MicrolearningMaterial[]
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
 
@@ -118,4 +121,89 @@ model RiskProfile {
 
   @@index([patientId])
   @@map("risk_profiles")
+}
+
+// ── Phase 2: Safety Query ──────────────────────────────────────────────
+
+enum SafetyQueryStatus {
+  OPEN
+  RED_FLAG_TRIGGERED
+  CLOSED
+}
+
+enum QueryMessageRole {
+  CHW
+  ASSISTANT
+}
+
+model SafetyQuery {
+  id          String               @id @default(uuid())
+  patientId   String
+  patient     Patient              @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  caregiverId String
+  caregiver   User                 @relation("UserSafetyQueries", fields: [caregiverId], references: [id], onDelete: Cascade)
+  title       String               @default("Safety Query")
+  status      SafetyQueryStatus    @default(OPEN)
+  messages    SafetyQueryMessage[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([patientId])
+  @@index([caregiverId])
+  @@map("safety_queries")
+}
+
+model SafetyQueryMessage {
+  id        String           @id @default(uuid())
+  queryId   String
+  query     SafetyQuery      @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  role      QueryMessageRole
+  content   String
+  // metadata: { isRedFlag, referralReason, linkedMaterialIds, linkedMaterialTitles }
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([queryId])
+  @@map("safety_query_messages")
+}
+
+// ── Phase 2: Microlearning ─────────────────────────────────────────────
+
+enum PreventionTrack {
+  PRIMARY    // prevent wound / entry formation
+  SECONDARY  // stop existing wound from progressing
+  COMBINED   // both Primary + Secondary running simultaneously
+  GENERAL    // not wound-specific (e.g., nutrition, caregiver support)
+}
+
+enum TargetAudience {
+  CHW
+  CAREGIVER
+  BOTH
+}
+
+enum MaterialSource {
+  SYSTEM_AUTO  // auto-generated on risk profile completion
+  CHW_REQUEST  // CHW manually triggered generation
+}
+
+model MicrolearningMaterial {
+  id               String          @id @default(uuid())
+  patientId        String
+  patient          Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  title            String
+  topic            String
+  preventionTrack  PreventionTrack @default(GENERAL)
+  targetAudience   TargetAudience  @default(BOTH)
+  // Full structured content JSON:
+  // { prescriptive[], prohibitive[], lowCostWorkarounds[], keySigns[], emergencyAction, summary }
+  contentData      Json
+  isAutoRecommended Boolean        @default(false)
+  isAssigned        Boolean        @default(false)
+  generatedBy       MaterialSource @default(SYSTEM_AUTO)
+  triggerContext    String?
+  createdAt         DateTime       @default(now())
+
+  @@index([patientId])
+  @@map("microlearning_materials")
 }

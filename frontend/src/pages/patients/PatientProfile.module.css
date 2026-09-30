@@ -129,3 +129,43 @@
   .headerLeft { flex-wrap: wrap; }
   .discoveryRow { flex-direction: column; align-items: flex-start; }
 }
+
+/* Safety Query + Microlearning feature cards */
+.featureRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.featureInfo { flex: 1; min-width: 0; }
+
+.featureDesc {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.4rem;
+  line-height: 1.55;
+}
+
+.featureMeta {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.redFlagNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .featureRow { flex-direction: column; align-items: stretch; }
+}

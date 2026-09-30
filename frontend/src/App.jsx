@@ -7,65 +7,30 @@ import PatientList from "./pages/patients/PatientList.jsx";
 import PatientForm from "./pages/patients/PatientForm.jsx";
 import PatientProfile from "./pages/patients/PatientProfile.jsx";
 import DiscoverySession from "./pages/discovery/DiscoverySession.jsx";
+import SafetyQueryPage from "./pages/safety-query/SafetyQueryPage.jsx";
+import MicrolearningPage from "./pages/microlearning/MicrolearningPage.jsx";
+
+function Protected({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>;
+}
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/login"    element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/dashboard"           element={<Protected><Dashboard /></Protected>} />
+      <Route path="/patients"            element={<Protected><PatientList /></Protected>} />
+      <Route path="/patients/new"        element={<Protected><PatientForm /></Protected>} />
+      <Route path="/patients/:id"        element={<Protected><PatientProfile /></Protected>} />
+      <Route path="/patients/:id/edit"   element={<Protected><PatientForm /></Protected>} />
+      <Route path="/patients/:id/onboarding"    element={<Protected><DiscoverySession /></Protected>} />
+      <Route path="/patients/:id/safety-query"  element={<Protected><SafetyQueryPage /></Protected>} />
+      <Route path="/patients/:id/microlearning" element={<Protected><MicrolearningPage /></Protected>} />
 
-      <Route
-        path="/patients"
-        element={
-          <ProtectedRoute>
-            <PatientList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/patients/new"
-        element={
-          <ProtectedRoute>
-            <PatientForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/patients/:id"
-        element={
-          <ProtectedRoute>
-            <PatientProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/patients/:id/edit"
-        element={
-          <ProtectedRoute>
-            <PatientForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/patients/:id/onboarding"
-        element={
-          <ProtectedRoute>
-            <DiscoverySession />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/"  element={<Navigate to="/dashboard" replace />} />
+      <Route path="*"  element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

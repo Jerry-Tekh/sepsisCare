@@ -2,6 +2,12 @@ const prisma = require("../../config/prismaClient");
 const openaiService = require("../discovery/openai/openai.service");
 const { riskProfileSchema } = require("./risk.schema");
 const { NotFoundError } = require("../../errors/AppError");
+const logger = require("../../utils/logger");
+
+// Lazy-require to avoid circular dependency (microlearning → risk → microlearning)
+function getMicrolearningService() {
+  return require("../microlearning/microlearning.service");
+}
 
 /**
  * SCORING ASSUMPTIONS (flagged for clinical sign-off — see project README):
@@ -169,13 +175,27 @@ async function generateAndSaveRiskProfile(patientId) {
     summary,
   });
 
-  return prisma.riskProfile.create({
+  const savedProfile = await prisma.riskProfile.create({
     data: {
       patientId,
       riskData: riskProfileData,
       summary: riskProfileData.summary,
     },
   });
+
+  // Fire-and-forget: auto-generate microlearning materials based on the risk profile.
+  // We deliberately do NOT await this so it never delays the risk profile response to the client.
+  // If generation fails it logs the error but does not affect the saved risk profile.
+  getMicrolearningService()
+    .autoGenerateForRiskProfile(patientId, riskProfileData)
+    .catch((err) =>
+      logger.error("Microlearning auto-generation failed after risk profile save", {
+        patientId,
+        error: err.message,
+      })
+    );
+
+  return savedProfile;
 }
 
 async function getLatest(patientId) {

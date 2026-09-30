@@ -1,0 +1,149 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(192, 57, 43, 0.97);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+
+/* Pulsing alert icon */
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  background: #fbe9e7;
+  border-radius: 50%;
+  margin-bottom: 1.25rem;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.4); }
+  50%       { box-shadow: 0 0 0 16px rgba(192,57,43,0); }
+}
+
+.icon { color: #c0392b; }
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #c0392b;
+  margin: 0 0 0.35rem;
+}
+
+.patientName {
+  font-size: 0.92rem;
+  color: #6b7280;
+  margin: 0 0 1.25rem;
+  font-weight: 600;
+}
+
+/* Reason box */
+.reasonBox {
+  background: #fbe9e7;
+  border-left: 4px solid #c0392b;
+  border-radius: 0 8px 8px 0;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.reasonLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c0392b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.3rem;
+}
+
+.reasonText {
+  font-size: 0.93rem;
+  color: #374151;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Action cards */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.actionCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #f5f7fa;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  text-align: left;
+}
+
+.actionIcon { color: #c0392b; flex-shrink: 0; }
+
+.actionTitle {
+  font-weight: 700;
+  font-size: 0.93rem;
+  color: #1f2937;
+  margin: 0 0 0.15rem;
+}
+
+.actionSub {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.disclaimer {
+  font-size: 0.82rem;
+  color: #c0392b;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.backBtn:hover { background: #f5f7fa; }
+
+@media (max-width: 480px) {
+  .card { padding: 1.75rem 1.25rem; }
+  .title { font-size: 1.35rem; }
+}

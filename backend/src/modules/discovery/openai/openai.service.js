@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 const { zodResponseFormat } = require("openai/helpers/zod");
+const { z } = require("zod");
 const env = require("../../../config/env");
 const logger = require("../../../utils/logger");
 const {
@@ -192,4 +193,190 @@ Write a concise (3-5 sentence) plain-language summary for a caregiver, describin
   }
 }
 
-module.exports = { generateQuestion, interpretAnswer, generateRiskSummary };
+// ── Safety Query ──────────────────────────────────────────────────────────────
+
+const SAFETY_QUERY_SYSTEM_PROMPT = `You are a Clinical Safety Advisor embedded in a Community Health Worker (CHW) support application for sepsis prevention in Nigerian communities.
+
+You have full context about the specific patient this CHW is caring for, including their conditions, risk levels, and assigned care materials.
+
+Your role:
+- Answer evidence-based questions about safe home care practices
+- Warn explicitly about harmful traditional practices (herbal concoctions on wounds, etc.)
+- Provide low-cost, context-aware alternatives when resources are limited
+- Detect any RED FLAG symptoms described by the CHW and immediately escalate
+
+RED FLAG triggers (ALWAYS set isRedFlag:true if ANY of these appear):
+- Confusion or altered consciousness
+- Rapid or laboured breathing
+- Extremely high fever (especially with confusion)
+- Uncontrolled bleeding
+- Patient cannot be woken or is unresponsive
+- Severe pain spreading from a wound
+- Signs of shock (cold clammy skin, very rapid weak pulse)
+
+Rules:
+- You do NOT diagnose
+- You speak plainly — the CHW will relay your answer to a caregiver
+- Keep answers concise (3-5 sentences max unless steps are needed)
+- If you reference a material from the assigned list, include its id and title in linkedMaterials
+- ALWAYS return valid JSON matching the required schema`;
+
+const safetyQueryResponseSchema = z.object({
+  answer: z.string().min(1).max(2000),
+  isRedFlag: z.boolean(),
+  referralReason: z.string().nullable(),
+  linkedMaterialIds: z.array(z.string()),
+  linkedMaterialTitles: z.array(z.string()),
+});
+
+/**
+ * Answers a CHW safety query with full patient context.
+ * Detects red flags and references relevant microlearning materials.
+ */
+async function answerSafetyQuery({ patient, riskProfile, assignedMaterials, conversationHistory, latestQuestion }) {
+  const riskSummary = riskProfile
+    ? `Infection risk: ${riskProfile.infection_risk}, Sepsis risk: ${riskProfile.sepsis_risk}, Pressure injury risk: ${riskProfile.pressure_injury_risk}, Caregiver burden: ${riskProfile.caregiver_burden}. Referral recommended: ${riskProfile.referral_recommended}.`
+    : "No risk profile yet — patient is still being assessed.";
+
+  const materialsText = assignedMaterials.length > 0
+    ? assignedMaterials.map(m => `- ID: ${m.id} | "${m.title}" (${m.topic})`).join("\n")
+    : "No materials assigned yet.";
+
+  const historyText = conversationHistory
+    .slice(-8)
+    .map(m => `${m.role === "CHW" ? "CHW" : "Advisor"}: ${m.content}`)
+    .join("\n");
+
+  const userPrompt = `PATIENT CONTEXT:
+Name: ${patient.fullName}, Age: ${patient.age}, Gender: ${patient.gender}
+Risk profile: ${riskSummary}
+
+ASSIGNED MICROLEARNING MATERIALS (reference these by ID and title if relevant):
+${materialsText}
+
+CONVERSATION:
+${historyText}
+
+Latest CHW question: "${latestQuestion}"
+
+Respond in JSON with: answer, isRedFlag (bool), referralReason (string or null), linkedMaterialIds (array), linkedMaterialTitles (array).`;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const completion = await client.chat.completions.create({
+        model: env.openaiModel,
+        messages: [
+          { role: "system", content: SAFETY_QUERY_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: zodResponseFormat(safetyQueryResponseSchema, "safety_query_response"),
+      });
+      const raw = completion.choices[0]?.message?.content;
+      return safetyQueryResponseSchema.parse(JSON.parse(raw));
+    } catch (err) {
+      logger.warn(`answerSafetyQuery attempt ${attempt + 1} failed`, { error: err.message });
+    }
+  }
+
+  // Fallback if OpenAI unavailable
+  return {
+    answer: "I was unable to process your question right now. Please consult the assigned microlearning materials, or contact a clinical supervisor if this is urgent.",
+    isRedFlag: false,
+    referralReason: null,
+    linkedMaterialIds: [],
+    linkedMaterialTitles: [],
+  };
+}
+
+// ── Microlearning Content Generation ────────────────────────────────────────
+
+const MICROLEARNING_SYSTEM_PROMPT = `You are a Clinical Education Specialist creating patient-specific microlearning materials for Community Health Workers in Nigerian home care settings.
+
+Materials must be:
+- Specific to the named patient's exact conditions and risk level
+- Practical for low-resource environments (no assumptions about electricity, running water, etc.)
+- Split into: what TO do (prescriptive) and what NOT to do (prohibitive)
+- Include low-cost workarounds for common resource constraints
+- Written in plain English a CHW can read aloud to a semi-literate caregiver
+
+Always include Nigerian-context considerations where relevant (e.g., alternatives to expensive medical supplies, addressing common traditional practices).
+
+Return ONLY valid JSON.`;
+
+const microlearningContentSchema = z.object({
+  title: z.string().min(1).max(150),
+  summary: z.string().min(1).max(400),
+  prescriptive: z.array(z.string()).min(1).max(10),
+  prohibitive: z.array(z.string()).min(1).max(10),
+  lowCostWorkarounds: z.array(z.string()).min(1).max(6),
+  keySigns: z.array(z.string()).min(1).max(6),
+  emergencyAction: z.string().min(1).max(300),
+  reviewNote: z.string().min(1).max(200),
+});
+
+/**
+ * Generates structured microlearning content for a patient on a given topic.
+ * Patient context, risk profile, and prevention track all inform the output.
+ */
+async function generateMicrolearningContent({ patient, riskProfile, topic, preventionTrack, targetAudience, triggerContext }) {
+  const riskSummary = riskProfile
+    ? `Infection risk: ${riskProfile.infection_risk}, Sepsis risk: ${riskProfile.sepsis_risk}, Pressure injury risk: ${riskProfile.pressure_injury_risk}, Environmental risk: ${riskProfile.environmental_risk}, Caregiver burden: ${riskProfile.caregiver_burden}.`
+    : "Risk profile not yet available.";
+
+  const trackDescriptions = {
+    PRIMARY: "patient has underlying conditions but NO active wounds yet — focus on PREVENTING wounds and infections",
+    SECONDARY: "patient has an ACTIVE wound or infection portal — focus on preventing it from getting worse or progressing to sepsis",
+    COMBINED: "patient has BOTH underlying conditions AND an active wound — cover both prevention angles, carefully managing caregiver fatigue",
+    GENERAL: "general care guidance not specific to a wound",
+  };
+
+  const userPrompt = `Create a microlearning material for:
+
+Patient: ${patient.fullName}, Age: ${patient.age}, Gender: ${patient.gender}
+Risk summary: ${riskSummary}
+Prevention track: ${preventionTrack} — ${trackDescriptions[preventionTrack] || "general"}
+Topic: ${topic}
+Target audience: ${targetAudience}
+Trigger context: ${triggerContext || "General care support"}
+
+Generate a complete, patient-specific guide with:
+- title (specific to ${patient.fullName})
+- summary (1-2 sentences)
+- prescriptive (ordered steps: what to do)
+- prohibitive (what NEVER to do — include common Nigerian harmful practices if relevant)
+- lowCostWorkarounds (affordable alternatives for resource-limited settings)
+- keySigns (warning signs to watch for and report)
+- emergencyAction (exactly what to do if those signs appear)
+- reviewNote (when to revisit this guide)`;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const completion = await client.chat.completions.create({
+        model: env.openaiModel,
+        messages: [
+          { role: "system", content: MICROLEARNING_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: zodResponseFormat(microlearningContentSchema, "microlearning_content"),
+      });
+      const raw = completion.choices[0]?.message?.content;
+      return microlearningContentSchema.parse(JSON.parse(raw));
+    } catch (err) {
+      logger.warn(`generateMicrolearningContent attempt ${attempt + 1} failed`, { error: err.message });
+    }
+  }
+
+  // Fallback content
+  return {
+    title: `${topic} Guide for ${patient.fullName}`,
+    summary: "This guide provides essential care instructions. Please review with your clinical supervisor.",
+    prescriptive: ["Follow the care plan provided by your clinical team", "Keep the patient comfortable and monitor for changes"],
+    prohibitive: ["Do not apply any home remedies without clinical approval", "Do not ignore worsening symptoms"],
+    lowCostWorkarounds: ["Contact your CHW supervisor if supplies run low"],
+    keySigns: ["Fever", "Confusion", "Rapid breathing", "Wound looking worse"],
+    emergencyAction: "If any red flags appear, stop home care and take the patient to the nearest clinic immediately.",
+    reviewNote: "Review this guide at every CHW visit.",
+  };
+}
+
+module.exports = { generateQuestion, interpretAnswer, generateRiskSummary, answerSafetyQuery, generateMicrolearningContent };

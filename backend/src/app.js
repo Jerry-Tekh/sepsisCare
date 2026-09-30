@@ -14,36 +14,44 @@ const patientRoutes   = require("./modules/patient/patient.routes");
 const discoveryRoutes = require("./modules/discovery/discovery.routes");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 
+const {
+  patientRouter: safetyQueryPatientRouter,
+  sessionRouter: safetyQuerySessionRouter,
+} = require("./modules/safety-query/safety-query.routes");
+
+const {
+  patientRouter: microlearningPatientRouter,
+  materialRouter: microlearningMaterialRouter,
+} = require("./modules/microlearning/microlearning.routes");
+
 const app = express();
 
-// Required when running behind a reverse proxy / load balancer (Render,
-// Railway, Heroku, Nginx, AWS ALB) so req.ip and rate limiting see the
-// real client IP via X-Forwarded-For instead of the proxy's IP.
 app.set("trust proxy", 1);
 
 app.use(helmet());
 app.use(compression());
-
-// credentials:true is REQUIRED for the browser to include the httpOnly cookie
-// on cross-origin requests. The origin must be an explicit value (not "*")
-// when credentials are used — the browser enforces this.
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
-
 app.use(express.json());
 app.use(cookieParser());
 app.use(requestLogger);
 
 app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 
-// Public auth routes — stricter rate limit, no auth middleware.
-// NOTE: /me inside auth.routes.js applies authMiddleware directly on that
-// route handler, so it is protected even though the parent mount here has none.
+// Public auth routes
 app.use("/api/auth", authLimiter, authRoutes);
 
-// Everything below requires a valid JWT cookie
+// Protected routes — all require a valid JWT cookie
 app.use("/api/patients",   apiLimiter, authMiddleware, patientRoutes);
 app.use("/api/onboarding", apiLimiter, authMiddleware, discoveryRoutes);
 app.use("/api/dashboard",  apiLimiter, authMiddleware, dashboardRoutes);
+
+// Safety Query — patient-scoped (start / list) + session-scoped (message / close)
+app.use("/api/patients/:patientId/safety-query", apiLimiter, authMiddleware, safetyQueryPatientRouter);
+app.use("/api/safety-query", apiLimiter, authMiddleware, safetyQuerySessionRouter);
+
+// Microlearning — patient-scoped (list / generate) + material-scoped (view / assign / download)
+app.use("/api/patients/:patientId/microlearning", apiLimiter, authMiddleware, microlearningPatientRouter);
+app.use("/api/microlearning", apiLimiter, authMiddleware, microlearningMaterialRouter);
 
 // 404 handler for unmatched API routes
 app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
