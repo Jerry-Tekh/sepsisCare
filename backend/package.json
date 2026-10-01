@@ -13,11 +13,9 @@
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js"
   },
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "dependencies": {
-    "@prisma/client": "6.19.3",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "bcrypt": "6.0.0",
     "compression": "1.8.1",
     "cookie-parser": "1.4.7",
@@ -29,12 +27,13 @@
     "jsonwebtoken": "9.0.3",
     "morgan": "1.11.0",
     "openai": "6.45.0",
-    "zod": "4.4.3",
-    "pdfkit": "0.20.2"
+    "pdfkit": "0.20.2",
+    "pg": "^8.23.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "nodemon": "3.1.14",
-    "prisma": "6.19.3"
+    "prisma": "^7.10.0"
   },
   "engines": {
     "node": ">=20.0.0"
