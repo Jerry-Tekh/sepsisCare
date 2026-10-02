@@ -8,7 +8,7 @@
  *     answers: { [objectiveKey]: value }  // flattened answers across ALL pathways so far
  *   }
  *
- * Rules must never perform I/O (no Prisma, no OpenAI, no fetch). This keeps
+ * Rules must never perform I/O (no Prisma, no AI API calls, no fetch). This keeps
  * the engine deterministic and unit-testable without a database or network.
  *
  * To add a new rule: append a function to the `rules` array. Nothing else

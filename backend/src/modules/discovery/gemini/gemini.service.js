@@ -1,23 +1,58 @@
-const OpenAI = require("openai");
-const { zodResponseFormat } = require("openai/helpers/zod");
+const { GoogleGenAI } = require("@google/genai");
 const { z } = require("zod");
 const env = require("../../../config/env");
 const logger = require("../../../utils/logger");
 const {
   questionResponseSchema,
   answerInterpretationSchema,
-} = require("./openai.responseSchema");
+} = require("./gemini.responseSchema");
 const {
   QUESTION_SYSTEM_PROMPT,
   buildQuestionPrompt,
   INTERPRETATION_SYSTEM_PROMPT,
   buildInterpretationPrompt,
-} = require("./openai.prompts");
+} = require("./gemini.prompts");
 
-const client = new OpenAI({ apiKey: env.openaiApiKey });
+const client = new GoogleGenAI({ apiKey: env.geminiApiKey });
+
+function toGeminiJsonSchema(zodSchema) {
+  const jsonSchema = z.toJSONSchema(zodSchema, { target: "draft-7" });
+
+  function cleanSchema(node) {
+    if (Array.isArray(node)) {
+      node.forEach(cleanSchema);
+      return;
+    }
+    if (!node || typeof node !== "object") return;
+
+    delete node.$schema;
+    delete node.minLength;
+    delete node.maxLength;
+    Object.values(node).forEach(cleanSchema);
+  }
+
+  cleanSchema(jsonSchema);
+  return jsonSchema;
+}
+
+async function generateText(prompt, systemInstruction, responseSchema) {
+  const config = { systemInstruction };
+  if (responseSchema) {
+    config.responseMimeType = "application/json";
+    config.responseJsonSchema = toGeminiJsonSchema(responseSchema);
+  }
+
+  const response = await client.models.generateContent({
+    model: env.geminiModel,
+    contents: prompt,
+    config,
+  });
+
+  return response.text?.trim() || "";
+}
 
 /**
- * Fallback question templates, keyed by objective. Used only if OpenAI is
+ * Fallback question templates, keyed by objective. Used only if Gemini is
  * unreachable or returns something that fails validation twice in a row.
  * This guarantees the discovery flow never hard-blocks the caregiver.
  */
@@ -73,7 +108,7 @@ function fallbackQuestion(pathwayName, objectiveKey) {
 
 /**
  * Generates the next caregiver-facing question for the given pathway/objective.
- * OpenAI controls phrasing ONLY — pathwayName and objectiveKey are dictated
+ * Gemini controls phrasing ONLY — pathwayName and objectiveKey are dictated
  * by the rules engine and are echoed back, never chosen by the model.
  */
 async function generateQuestion({ pathwayName, objectiveKey, patient, conversationHistory }) {
@@ -81,23 +116,7 @@ async function generateQuestion({ pathwayName, objectiveKey, patient, conversati
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completion = await client.chat.completions.create({
-        model: env.openaiModel,
-        messages: [
-          { role: "system", content: QUESTION_SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-        response_format: zodResponseFormat(questionResponseSchema, "discovery_question"),
-        // NOTE: temperature is intentionally omitted. Current-generation
-        // reasoning-tier models (e.g. the GPT-5 family) reject non-default
-        // temperature values with a 400 error on /v1/chat/completions, and
-        // Structured Outputs already enforces schema correctness regardless
-        // of temperature, so there's no need to risk it. If you choose a
-        // model that does support tuning creativity, add `temperature` back
-        // here for that specific deployment.
-      });
-
-      const raw = completion.choices[0]?.message?.content;
+      const raw = await generateText(prompt, QUESTION_SYSTEM_PROMPT, questionResponseSchema);
       const parsed = questionResponseSchema.parse(JSON.parse(raw));
 
       // Enforce that the model didn't drift from the dictated pathway/objective.
@@ -107,7 +126,7 @@ async function generateQuestion({ pathwayName, objectiveKey, patient, conversati
         objective: objectiveKey,
       };
     } catch (err) {
-      logger.warn(`OpenAI generateQuestion attempt ${attempt + 1} failed`, {
+      logger.warn(`Gemini generateQuestion attempt ${attempt + 1} failed`, {
         error: err.message,
       });
     }
@@ -120,27 +139,17 @@ async function generateQuestion({ pathwayName, objectiveKey, patient, conversati
 /**
  * Interprets a caregiver's free-text answer into a structured value the
  * rules engine can use to evaluate activation/completion. Falls back to
- * a naive heuristic if OpenAI is unavailable.
+ * a naive heuristic if Gemini is unavailable.
  */
 async function interpretAnswer({ pathwayName, objectiveKey, question, answerText }) {
   const prompt = buildInterpretationPrompt({ pathwayName, objectiveKey, question, answerText });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completion = await client.chat.completions.create({
-        model: env.openaiModel,
-        messages: [
-          { role: "system", content: INTERPRETATION_SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-        response_format: zodResponseFormat(answerInterpretationSchema, "answer_interpretation"),
-        // temperature intentionally omitted — see note in generateQuestion above.
-      });
-
-      const raw = completion.choices[0]?.message?.content;
+      const raw = await generateText(prompt, INTERPRETATION_SYSTEM_PROMPT, answerInterpretationSchema);
       return answerInterpretationSchema.parse(JSON.parse(raw));
     } catch (err) {
-      logger.warn(`OpenAI interpretAnswer attempt ${attempt + 1} failed`, {
+      logger.warn(`Gemini interpretAnswer attempt ${attempt + 1} failed`, {
         error: err.message,
       });
     }
@@ -160,7 +169,7 @@ async function interpretAnswer({ pathwayName, objectiveKey, question, answerText
 /**
  * Generates the free-text "summary" field of a risk profile from the
  * collected pathway data. Risk LEVELS themselves are never decided by
- * OpenAI — only this narrative summary. See risk.service.js.
+ * Gemini — only this narrative summary. See risk.service.js.
  */
 async function generateRiskSummary({ patient, pathwayData, computedRisk }) {
   const prompt = `Patient: age ${patient.age}, gender ${patient.gender}.
@@ -172,21 +181,12 @@ Computed risk levels: ${JSON.stringify(computedRisk)}
 Write a concise (3-5 sentence) plain-language summary for a caregiver, describing what was found and why the risk levels are what they are. Do not diagnose. Do not contradict the computed risk levels. Return plain text only, no JSON.`;
 
   try {
-    const completion = await client.chat.completions.create({
-      model: env.openaiModel,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You write clear, caregiver-friendly summaries of screening results. You never diagnose, never contradict the risk levels you're given, and never invent facts beyond what's in the data.",
-        },
-        { role: "user", content: prompt },
-      ],
-      // temperature intentionally omitted — see note in generateQuestion above.
-    });
-    return completion.choices[0]?.message?.content?.trim() || "Summary unavailable.";
+    return await generateText(
+      prompt,
+      "You write clear, caregiver-friendly summaries of screening results. You never diagnose, never contradict the risk levels you're given, and never invent facts beyond what's in the data."
+    ) || "Summary unavailable.";
   } catch (err) {
-    logger.warn("OpenAI generateRiskSummary failed, using fallback summary", {
+    logger.warn("Gemini generateRiskSummary failed, using fallback summary", {
       error: err.message,
     });
     return "Screening completed. Please review the individual risk levels below and consider professional follow-up where indicated.";
@@ -263,22 +263,14 @@ Respond in JSON with: answer, isRedFlag (bool), referralReason (string or null),
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completion = await client.chat.completions.create({
-        model: env.openaiModel,
-        messages: [
-          { role: "system", content: SAFETY_QUERY_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: zodResponseFormat(safetyQueryResponseSchema, "safety_query_response"),
-      });
-      const raw = completion.choices[0]?.message?.content;
+      const raw = await generateText(userPrompt, SAFETY_QUERY_SYSTEM_PROMPT, safetyQueryResponseSchema);
       return safetyQueryResponseSchema.parse(JSON.parse(raw));
     } catch (err) {
-      logger.warn(`answerSafetyQuery attempt ${attempt + 1} failed`, { error: err.message });
+      logger.warn(`Gemini answerSafetyQuery attempt ${attempt + 1} failed`, { error: err.message });
     }
   }
 
-  // Fallback if OpenAI unavailable
+  // Fallback if Gemini is unavailable.
   return {
     answer: "I was unable to process your question right now. Please consult the assigned microlearning materials, or contact a clinical supervisor if this is urgent.",
     isRedFlag: false,
@@ -351,18 +343,10 @@ Generate a complete, patient-specific guide with:
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completion = await client.chat.completions.create({
-        model: env.openaiModel,
-        messages: [
-          { role: "system", content: MICROLEARNING_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: zodResponseFormat(microlearningContentSchema, "microlearning_content"),
-      });
-      const raw = completion.choices[0]?.message?.content;
+      const raw = await generateText(userPrompt, MICROLEARNING_SYSTEM_PROMPT, microlearningContentSchema);
       return microlearningContentSchema.parse(JSON.parse(raw));
     } catch (err) {
-      logger.warn(`generateMicrolearningContent attempt ${attempt + 1} failed`, { error: err.message });
+      logger.warn(`Gemini generateMicrolearningContent attempt ${attempt + 1} failed`, { error: err.message });
     }
   }
 

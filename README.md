@@ -12,10 +12,10 @@ This system helps caregivers and community health workers uncover hidden patient
 |---|---|
 | Frontend | React 19 + Vite + React Router + Axios + CSS Modules |
 | Backend | Node.js + Express 5 |
-| Database | PostgreSQL + Prisma ORM 6 |
+| Database | PostgreSQL + Prisma ORM 7 |
 | Auth | JWT stored in **httpOnly cookie** + bcrypt |
 | Validation | Zod 4 |
-| AI | OpenAI API (gpt-4o-mini, Structured Outputs) |
+| AI | Gemini API (Gemini 3.8 Flash, structured JSON output) |
 | Security | Helmet, cookie-parser, express-rate-limit, compression, CORS credentials |
 
 ---
@@ -24,7 +24,7 @@ This system helps caregivers and community health workers uncover hidden patient
 
 - Node.js 20 LTS or newer
 - PostgreSQL 14+ running locally or accessible via connection string
-- An OpenAI API key
+- A Gemini API key from Google AI Studio
 
 ---
 
@@ -35,7 +35,7 @@ This system helps caregivers and community health workers uncover hidden patient
 ```bash
 cd backend
 cp .env.example .env
-# Fill in: DATABASE_URL, JWT_SECRET, OPENAI_API_KEY
+# Fill in: DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
 
 npm install
 npx prisma migrate dev --name init
@@ -140,11 +140,11 @@ Deploy `frontend/dist/` to any static host (Vercel, Netlify, Cloudflare Pages, S
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string. e.g. `postgresql://user:pass@host:5432/db?schema=public`. Add `?sslmode=require` for most cloud providers. |
 | `JWT_SECRET` | ✅ | Long random string. Generate: `openssl rand -base64 48`. **Never reuse the example value.** Rotating this invalidates all active sessions. |
-| `OPENAI_API_KEY` | ✅ | Your OpenAI API key. Set spend limits on the OpenAI dashboard — this app makes 2–3 API calls per onboarding answer. |
+| `GEMINI_API_KEY` | ✅ | Your Gemini API key from Google AI Studio. This app makes 2–3 API calls per onboarding answer. |
 | `CORS_ORIGIN` | ✅ | Exact frontend URL, e.g. `https://your-app.com`. No trailing slash. Must match exactly or the browser will block credentialed requests. |
 | `NODE_ENV` | ✅ | Set to `production` in production. Controls `Secure` and `SameSite` cookie flags, Prisma log level, and error verbosity. |
 | `JWT_EXPIRES_IN` | Optional | Token lifetime. Default: `2h`. Accepts `30m`, `8h`, `7d`, etc. Cookie `Max-Age` is derived automatically. |
-| `OPENAI_MODEL` | Optional | Default: `gpt-4o-mini`. Check `platform.openai.com/docs/models` at deploy time. |
+| `GEMINI_MODEL` | Optional | Default: `gemini-3.8-flash`. Check `ai.google.dev/gemini-api/docs/models` for current model availability. |
 | `PORT` | Optional | Default: `5000`. Most platforms inject this automatically. |
 
 ### Frontend (set before `npm run build`)

@@ -2,7 +2,7 @@ const rateLimit = require("express-rate-limit");
 
 /**
  * General API rate limit: generous enough for normal app usage, but bounds
- * worst-case abuse (and OpenAI API cost exposure) from a single client.
+ * worst-case abuse (and AI API cost exposure) from a single client.
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

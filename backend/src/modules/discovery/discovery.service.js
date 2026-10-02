@@ -1,6 +1,6 @@
 const prisma = require("../../config/prismaClient");
 const { BadRequestError, NotFoundError, ConflictError } = require("../../errors/AppError");
-const openaiService = require("./openai/openai.service");
+const geminiService = require("./gemini/gemini.service");
 const riskService = require("../risk/risk.service");
 const { evaluateActivations } = require("./rulesEngine/activationRules");
 const { selectNextObjective } = require("./rulesEngine/objectiveSelector");
@@ -51,7 +51,7 @@ async function askNextQuestion({ session, patient, patientPathways }) {
     orderBy: { createdAt: "asc" },
   });
 
-  const generated = await openaiService.generateQuestion({
+  const generated = await geminiService.generateQuestion({
     pathwayName: next.pathwayName,
     objectiveKey: next.objectiveKey,
     patient,
@@ -155,7 +155,7 @@ async function submitAnswer(sessionId, answerText) {
   });
 
   // Interpret the free-text answer into a structured value.
-  const interpretation = await openaiService.interpretAnswer({
+  const interpretation = await geminiService.interpretAnswer({
     pathwayName,
     objectiveKey,
     question: lastAssistantMessage.content,

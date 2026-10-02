@@ -1,5 +1,5 @@
 const prisma = require("../../config/prismaClient");
-const openaiService = require("../discovery/openai/openai.service");
+const geminiService = require("../discovery/gemini/gemini.service");
 const { riskProfileSchema } = require("./risk.schema");
 const { NotFoundError } = require("../../errors/AppError");
 const logger = require("../../utils/logger");
@@ -160,7 +160,7 @@ async function generateAndSaveRiskProfile(patientId) {
     caregiver_burden: caregiverBurden,
   };
 
-  const summary = await openaiService.generateRiskSummary({
+  const summary = await geminiService.generateRiskSummary({
     patient,
     pathwayData: answers,
     computedRisk,

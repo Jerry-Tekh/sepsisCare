@@ -1,7 +1,13 @@
 require("dotenv").config();
 
-const required = ["DATABASE_URL", "JWT_SECRET", "OPENAI_API_KEY"];
+const required = ["DATABASE_URL", "JWT_SECRET", "GEMINI_API_KEY"];
 const missing = required.filter((key) => !process.env[key]);
+if (process.env.GEMINI_API_KEY === "YOUR_GEMINI_KEY") {
+  missing.push("GEMINI_API_KEY (replace placeholder)");
+}
+if (process.env.GEMINI_MODEL === "YOUR_GEMINI_MODEL") {
+  missing.push("GEMINI_MODEL (replace placeholder)");
+}
 
 if (missing.length > 0) {
   console.error(
@@ -38,8 +44,8 @@ module.exports = {
   databaseUrl:   process.env.DATABASE_URL,
   jwtSecret:     process.env.JWT_SECRET,
   jwtExpiresIn,
-  openaiApiKey:  process.env.OPENAI_API_KEY,
-  openaiModel:   process.env.OPENAI_MODEL || "gpt-4o-mini",
+  geminiApiKey:  process.env.GEMINI_API_KEY,
+  geminiModel:   process.env.GEMINI_MODEL || "gemini-3.8-flash",
   corsOrigin:    process.env.CORS_ORIGIN || "http://localhost:5173",
 
   // Cookie configuration.

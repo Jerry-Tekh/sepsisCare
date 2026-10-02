@@ -1,4 +1,4 @@
-const openaiService = require("../discovery/openai/openai.service");
+const geminiService = require("../discovery/gemini/gemini.service");
 
 /**
  * Maps risk profile levels to the topics that should be auto-generated.
@@ -86,11 +86,11 @@ function buildMaterialPlan(riskData) {
 }
 
 /**
- * Generates all materials for a plan item using OpenAI.
+ * Generates all materials for a plan item using Gemini.
  * Returns the structured contentData object.
  */
 async function generateOneMaterial({ patient, riskData, planItem }) {
-  return openaiService.generateMicrolearningContent({
+  return geminiService.generateMicrolearningContent({
     patient,
     riskProfile: riskData,
     topic: planItem.topic,

@@ -1,5 +1,5 @@
 const prisma = require("../../config/prismaClient");
-const openaiService = require("../discovery/openai/openai.service");
+const geminiService = require("../discovery/gemini/gemini.service");
 const { NotFoundError, BadRequestError } = require("../../errors/AppError");
 
 /**
@@ -41,7 +41,7 @@ async function startQuery(patientId, caregiverId, firstQuestion) {
   });
 
   // Get the AI answer
-  const aiResponse = await openaiService.answerSafetyQuery({
+  const aiResponse = await geminiService.answerSafetyQuery({
     patient,
     riskProfile: riskProfile?.riskData || null,
     assignedMaterials: materials,
@@ -125,7 +125,7 @@ async function sendMessage(queryId, messageText, patientId) {
   const history = query.messages.map((m) => ({ role: m.role, content: m.content }));
   history.push({ role: "CHW", content: messageText });
 
-  const aiResponse = await openaiService.answerSafetyQuery({
+  const aiResponse = await geminiService.answerSafetyQuery({
     patient,
     riskProfile,
     assignedMaterials: materials,
