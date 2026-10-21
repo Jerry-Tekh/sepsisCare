@@ -47,7 +47,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #fbe9e7;
+  background-color: var(--color-danger-tint);
   color: var(--color-danger);
   border-radius: var(--radius);
   padding: 0.65rem 0.85rem;

@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { RiHeartPulseLine, RiMenuLine, RiCloseLine, RiLogoutBoxRLine } from "react-icons/ri";
+import { RiHeartPulseLine, RiMenuLine, RiCloseLine, RiLogoutBoxRLine, RiMoonLine, RiSunLine } from "react-icons/ri";
 import { FiUsers, FiGrid } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import Avatar from "./Avatar.jsx";
 import styles from "./AppLayout.module.css";
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -62,10 +65,26 @@ export default function AppLayout({ children }) {
 
           <div className={styles.userArea}>
             {user && (
-              <span className={styles.userName} title={user.fullName}>
-                {user.fullName}
-              </span>
+              <Link
+                to="/account"
+                className={`${styles.userInfo} ${isActive("/account")}`}
+                onClick={() => setMenuOpen(false)}
+                title="Account"
+              >
+                <Avatar name={user.fullName} size="xs" />
+                <span className={styles.userName} title={user.fullName}>
+                  {user.fullName}
+                </span>
+              </Link>
             )}
+            <button
+              className={styles.themeButton}
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <RiSunLine size={17} /> : <RiMoonLine size={17} />}
+            </button>
             <button className={styles.logoutButton} onClick={handleLogout} aria-label="Log out">
               <RiLogoutBoxRLine size={16} />
               <span>Log out</span>

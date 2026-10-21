@@ -7,6 +7,7 @@ import Input from "../../components/common/Input.jsx";
 import Button from "../../components/common/Button.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
 import * as patientApi from "../../api/patientApi";
+import { useToast } from "../../context/ToastContext.jsx";
 import styles from "./PatientForm.module.css";
 
 const GENDER_OPTIONS = ["Male", "Female", "Non-binary", "Other", "Prefer not to say"];
@@ -28,6 +29,7 @@ export default function PatientForm() {
   const [error,      setError]      = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading,    setLoading]    = useState(isEditing);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!isEditing) return;
@@ -59,9 +61,11 @@ export default function PatientForm() {
       const payload = { ...form, age: Number(form.age) };
       if (isEditing) {
         await patientApi.updatePatient(id, payload);
+        showToast("Patient details updated.", { type: "success" });
         navigate(`/patients/${id}`);
       } else {
         const { data } = await patientApi.createPatient(payload);
+        showToast(`${data.patient.fullName} was added.`, { type: "success" });
         navigate(`/patients/${data.patient.id}`);
       }
     } catch (err) {
@@ -117,8 +121,9 @@ export default function PatientForm() {
 
           {/* Gender — controlled select so values are consistent */}
           <div className={styles.selectField}>
-            <label className={styles.selectLabel}>Gender <span className={styles.required}>*</span></label>
+            <label className={styles.selectLabel} htmlFor="patient-gender">Gender <span className={styles.required}>*</span></label>
             <select
+              id="patient-gender"
               className={styles.select}
               value={form.gender}
               onChange={handleChange("gender")}

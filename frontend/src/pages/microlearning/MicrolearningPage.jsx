@@ -7,9 +7,11 @@ import {
 import { RiMedicineBottleLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
+import Skeleton from "../../components/common/Skeleton.jsx";
 import MaterialDetail from "./MaterialDetail.jsx";
 import * as microlearningApi from "../../api/microlearningApi";
 import * as patientApi from "../../api/patientApi";
+import { useToast } from "../../context/ToastContext.jsx";
 import styles from "./MicrolearningPage.module.css";
 
 const TOPIC_LABELS = {
@@ -51,6 +53,7 @@ export default function MicrolearningPage() {
   const [error,      setError]      = useState("");
   const [genTopic,   setGenTopic]   = useState("wound_care");
   const [showGenForm, setShowGenForm] = useState(false);
+  const { showToast } = useToast();
 
   async function loadMaterials() {
     try {
@@ -93,8 +96,11 @@ export default function MicrolearningPage() {
       await microlearningApi.requestGeneration(patientId, genTopic);
       await loadMaterials();
       setShowGenForm(false);
+      showToast(`${TOPIC_LABELS[genTopic] || "Guide"} generated.`, { type: "success" });
     } catch (err) {
-      setError(err.response?.data?.error || "Generation failed. Try again.");
+      const message = err.response?.data?.error || "Generation failed. Try again.";
+      setError(message);
+      showToast(message, { type: "error" });
     } finally {
       setGenerating(false);
     }
@@ -108,8 +114,10 @@ export default function MicrolearningPage() {
         prev.map((m) => (m.id === materialId ? { ...m, isAssigned: !currentState } : m))
       );
       if (selected?.id === materialId) setSelected((s) => ({ ...s, isAssigned: !currentState }));
+      showToast(currentState ? "Removed from care plan." : "Added to care plan.", { type: "success" });
     } catch {
       setError("Could not update assignment.");
+      showToast("Could not update assignment.", { type: "error" });
     } finally {
       setAssigning(null);
     }
@@ -119,7 +127,25 @@ export default function MicrolearningPage() {
   const recommended = materials.filter((m) => !m.isAssigned && m.isAutoRecommended);
   const others     = materials.filter((m) => !m.isAssigned && !m.isAutoRecommended);
 
-  if (loading) return <AppLayout><div className={styles.center}><Spinner size="lg" /></div></AppLayout>;
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className={styles.pageHeader}>
+          <Skeleton width="140px" height="0.85rem" />
+          <Skeleton width="60%" height="1.5rem" className={styles.skeletonGap} />
+          <Skeleton width="80%" height="0.9rem" className={styles.skeletonGap} />
+        </div>
+        <div className={styles.layout}>
+          <div className={styles.listPanel} style={{ padding: "0.85rem" }}>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} width="100%" height="2.75rem" radius="8px" className={styles.skeletonItem} />
+            ))}
+          </div>
+          <div className={styles.detailPanel} />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

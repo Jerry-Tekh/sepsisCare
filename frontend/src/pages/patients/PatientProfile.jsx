@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle,
-  FiUser, FiClipboard, FiMessageSquare,
+  FiClipboard, FiMessageSquare,
   FiBookOpen, FiHelpCircle,
 } from "react-icons/fi";
 import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
@@ -10,7 +10,8 @@ import AppLayout from "../../components/common/AppLayout.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import Badge from "../../components/common/Badge.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import Skeleton from "../../components/common/Skeleton.jsx";
+import Avatar from "../../components/common/Avatar.jsx";
 import ConversationHistory from "../../components/discovery/ConversationHistory.jsx";
 import * as patientApi      from "../../api/patientApi";
 import * as discoveryApi    from "../../api/discoveryApi";
@@ -82,7 +83,21 @@ export default function PatientProfile() {
   if (loading) {
     return (
       <AppLayout>
-        <div className={styles.loadingCenter}><Spinner size="lg" /></div>
+        <div className={styles.pageHeader}>
+          <div className={styles.headerLeft}>
+            <Skeleton circle width="52px" height="52px" />
+            <div>
+              <Skeleton width="180px" height="1.4rem" />
+              <Skeleton width="220px" height="0.85rem" className={styles.skeletonGap} />
+            </div>
+          </div>
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={styles.skeletonCard}>
+            <Skeleton width="140px" height="1rem" />
+            <Skeleton width="100%" height="2.5rem" className={styles.skeletonGap} />
+          </div>
+        ))}
       </AppLayout>
     );
   }
@@ -107,7 +122,7 @@ export default function PatientProfile() {
       {/* Page header */}
       <div className={styles.pageHeader}>
         <div className={styles.headerLeft}>
-          <div className={styles.avatar}><FiUser size={24} /></div>
+          <Avatar name={patient.fullName} size="lg" />
           <div>
             <h1 className={styles.patientName}>{patient.fullName}</h1>
             <p className={styles.patientMeta}>

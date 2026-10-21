@@ -9,6 +9,7 @@ import PatientProfile from "./pages/patients/PatientProfile.jsx";
 import DiscoverySession from "./pages/discovery/DiscoverySession.jsx";
 import SafetyQueryPage from "./pages/safety-query/SafetyQueryPage.jsx";
 import MicrolearningPage from "./pages/microlearning/MicrolearningPage.jsx";
+import AccountPage from "./pages/account/AccountPage.jsx";
 
 function Protected({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/patients/:id/onboarding"    element={<Protected><DiscoverySession /></Protected>} />
       <Route path="/patients/:id/safety-query"  element={<Protected><SafetyQueryPage /></Protected>} />
       <Route path="/patients/:id/microlearning" element={<Protected><MicrolearningPage /></Protected>} />
+      <Route path="/account" element={<Protected><AccountPage /></Protected>} />
 
       <Route path="/"  element={<Navigate to="/dashboard" replace />} />
       <Route path="*"  element={<Navigate to="/dashboard" replace />} />

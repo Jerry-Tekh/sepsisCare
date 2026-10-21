@@ -1,4 +1,6 @@
 .center { display:flex; justify-content:center; padding:3rem 0; }
+.skeletonGap { margin-top: 0.5rem; }
+.skeletonItem { margin-bottom: 0.5rem; }
 
 /* Page header */
 .pageHeader { margin-bottom:1.25rem; }
@@ -13,7 +15,7 @@
 
 .errorBox {
   display:flex; align-items:center; gap:0.5rem;
-  background:#fbe9e7; color:var(--color-danger);
+  background:var(--color-danger-tint); color:var(--color-danger);
   border-radius:var(--radius); padding:0.7rem 1rem;
   margin-bottom:1rem; font-size:0.88rem;
 }
@@ -23,7 +25,7 @@
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 1rem;
-  height: calc(100vh - 230px);
+  height: calc(100dvh - 230px);
   min-height: 520px;
 }
 
@@ -101,7 +103,7 @@
   transition:background-color 0.15s;
 }
 .materialItem:hover { background:var(--color-bg); }
-.materialItemActive { background:#e8f0fa; border-color:#bfdbfe; }
+.materialItemActive { background:var(--color-primary-tint); border-color:var(--color-primary-border); }
 
 .materialItemTop {
   display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem;
@@ -119,7 +121,7 @@
   transition:background-color 0.15s, color 0.15s;
 }
 .assignBtn:hover { background:var(--color-bg); color:var(--color-primary); }
-.assignBtnActive { background:#e8f0fa; color:var(--color-primary); border-color:#bfdbfe; }
+.assignBtnActive { background:var(--color-primary-tint); color:var(--color-primary); border-color:var(--color-primary-border); }
 
 .materialMeta { display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; flex-wrap:wrap; }
 

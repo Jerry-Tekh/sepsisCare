@@ -89,7 +89,7 @@
 }
 
 .navLinkActive {
-  background-color: #e8f0fa;
+  background-color: var(--color-primary-tint);
   color: var(--color-primary);
 }
 
@@ -101,6 +101,19 @@
   flex-shrink: 0;
 }
 
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+
+.userInfo:hover { background-color: var(--color-bg); }
+
 .userName {
   font-size: 0.82rem;
   color: var(--color-text-muted);
@@ -109,6 +122,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.themeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.themeButton:hover { background-color: var(--color-bg); color: var(--color-primary); }
 
 .logoutButton {
   display: inline-flex;
