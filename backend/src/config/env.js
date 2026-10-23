@@ -45,7 +45,7 @@ module.exports = {
   jwtSecret:     process.env.JWT_SECRET,
   jwtExpiresIn,
   geminiApiKey:  process.env.GEMINI_API_KEY,
-  geminiModel:   process.env.GEMINI_MODEL || "gemini-3.8-flash",
+  geminiModel:   process.env.GEMINI_MODEL || "gemini-2.5-pro",
   corsOrigin:    process.env.CORS_ORIGIN || "http://localhost:5173",
 
   // Cookie configuration.

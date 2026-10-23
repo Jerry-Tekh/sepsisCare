@@ -51,13 +51,16 @@ Health check: `GET /health`
 ```bash
 cd frontend
 cp .env.example .env
-# Set VITE_API_BASE_URL if your backend isn't on localhost:5000
+# To use the shared Render backend from your local frontend, set:
+# VITE_API_BASE_URL=https://sepsiscarebackend.onrender.com/api
 
 npm install
 npm run dev
 ```
 
 Frontend runs on `http://localhost:5173`.
+
+For local testing against the shared backend, put `VITE_API_BASE_URL=https://sepsiscarebackend.onrender.com/api` in `frontend/.env` and restart the Vite dev server. The hosted backend must also allow `http://localhost:5173` in its `CORS_ORIGIN` setting for browser requests to work.
 
 ---
 
@@ -144,7 +147,7 @@ Deploy `frontend/dist/` to any static host (Vercel, Netlify, Cloudflare Pages, S
 | `CORS_ORIGIN` | ✅ | Exact frontend URL, e.g. `https://your-app.com`. No trailing slash. Must match exactly or the browser will block credentialed requests. |
 | `NODE_ENV` | ✅ | Set to `production` in production. Controls `Secure` and `SameSite` cookie flags, Prisma log level, and error verbosity. |
 | `JWT_EXPIRES_IN` | Optional | Token lifetime. Default: `2h`. Accepts `30m`, `8h`, `7d`, etc. Cookie `Max-Age` is derived automatically. |
-| `GEMINI_MODEL` | Optional | Default: `gemini-3.8-flash`. Check `ai.google.dev/gemini-api/docs/models` for current model availability. |
+| `GEMINI_MODEL` | Optional | Default: `gemini-2.5-pro`. Check `ai.google.dev/gemini-api/docs/models` for current model availability. |
 | `PORT` | Optional | Default: `5000`. Most platforms inject this automatically. |
 
 ### Frontend (set before `npm run build`)

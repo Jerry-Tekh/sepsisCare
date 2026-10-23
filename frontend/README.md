@@ -5,12 +5,16 @@ React + Vite client for the caregiver onboarding and risk dashboard experience.
 ## Setup
 
 ```bash
-cp .env.example .env   # set VITE_API_BASE_URL if backend isn't on localhost:5000
+cp .env.example .env
+# To use the shared Render backend from your local frontend, set:
+# VITE_API_BASE_URL=https://sepsiscarebackend.onrender.com/api
 npm install
 npm run dev
 ```
 
 Runs on `http://localhost:5173`.
+
+For local testing against the shared backend, set `VITE_API_BASE_URL=https://sepsiscarebackend.onrender.com/api` in `.env`, then restart the Vite dev server. The hosted backend must allow `http://localhost:5173` in its `CORS_ORIGIN` setting for browser requests to work.
 
 ## Structure
 

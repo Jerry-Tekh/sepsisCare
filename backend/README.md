@@ -52,4 +52,4 @@ The thresholds in `risk.service.js` (e.g. "2+ sepsis red flags = high risk") are
 
 ## Gemini Model
 
-Defaults to `gemini-3.8-flash`. Override with the `GEMINI_MODEL` environment variable. Check the [Gemini model list](https://ai.google.dev/gemini-api/docs/models) for availability. Structured JSON responses are validated by the app with Zod.
+Defaults to `gemini-2.5-pro`. Override with the `GEMINI_MODEL` environment variable. Check the [Gemini model list](https://ai.google.dev/gemini-api/docs/models) for availability. Structured JSON responses are validated by the app with Zod.
