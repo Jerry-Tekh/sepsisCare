@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import styles from "./Button.module.css";
 
 export default function Button({
@@ -8,6 +9,7 @@ export default function Button({
   onClick,
   fullWidth = false,
   icon = null,
+  to,
 }) {
   const classNames = [
     styles.button,
@@ -15,10 +17,21 @@ export default function Button({
     fullWidth ? styles.fullWidth : "",
   ].filter(Boolean).join(" ");
 
-  return (
-    <button type={type} className={classNames} disabled={disabled} onClick={onClick}>
+  const content = (
+    <>
       {icon && <span className={styles.btnIcon}>{icon}</span>}
       {children}
+    </>
+  );
+
+  // `to` renders a router link styled as a button (avoids nesting <button> in <a>).
+  if (to) {
+    return <Link to={to} className={classNames} onClick={onClick}>{content}</Link>;
+  }
+
+  return (
+    <button type={type} className={classNames} disabled={disabled} onClick={onClick}>
+      {content}
     </button>
   );
 }

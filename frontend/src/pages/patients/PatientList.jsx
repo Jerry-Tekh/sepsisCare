@@ -1,149 +1,219 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FiUserPlus, FiEye, FiTrash2, FiUser, FiSearch, FiX } from "react-icons/fi";
+import { Link, useSearchParams } from "react-router-dom";
+import { FiUserPlus, FiTrash2, FiUsers, FiSearch, FiX, FiAlertTriangle, FiChevronRight } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
+import PageHeader from "../../components/common/PageHeader.jsx";
 import Button from "../../components/common/Button.jsx";
 import Skeleton from "../../components/common/Skeleton.jsx";
 import Avatar from "../../components/common/Avatar.jsx";
+import RiskBadge from "../../components/patients/RiskBadge.jsx";
+import usePatientsWithRisk, { sepsisLevel } from "../../hooks/usePatientsWithRisk.js";
 import * as patientApi from "../../api/patientApi";
 import { useToast } from "../../context/ToastContext.jsx";
 import styles from "./PatientList.module.css";
 
+const FILTERS = [
+  { key: "all",      label: "All" },
+  { key: "high",     label: "High risk" },
+  { key: "moderate", label: "Moderate" },
+  { key: "low",      label: "Low" },
+  { key: "none",     label: "Not assessed" },
+];
+
+function formatDate(iso) {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—";
+}
+
+function matchesFilter(patient, filter) {
+  if (filter === "all") return true;
+  const level = sepsisLevel(patient);
+  return filter === "none" ? level === null : level === filter;
+}
+
 export default function PatientList() {
-  const [patients, setPatients] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState("");
-  const [search,   setSearch]   = useState("");
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("q") || "");
+  const [filter, setFilter] = useState("all");
+  const { patients, loading, error, reload } = usePatientsWithRisk();
   const { showToast } = useToast();
 
-  const filteredPatients = patients.filter((p) =>
-    p.fullName.toLowerCase().includes(search.trim().toLowerCase())
-  );
+  // Keep in sync with the global top-bar search, which navigates here with ?q=.
+  useEffect(() => { setSearch(searchParams.get("q") || ""); }, [searchParams]);
 
-  function loadPatients() {
-    setLoading(true);
-    patientApi
-      .listPatients()
-      .then(({ data }) => setPatients(data.patients))
-      .catch(() => setError("Could not load patients."))
-      .finally(() => setLoading(false));
+  function updateSearch(value) {
+    setSearch(value);
+    setSearchParams(value ? { q: value } : {}, { replace: true });
   }
 
-  useEffect(() => { loadPatients(); }, []);
+  const term = search.trim().toLowerCase();
+  const visible = patients.filter((p) =>
+    matchesFilter(p, filter) &&
+    (!term || p.fullName.toLowerCase().includes(term) || (p.location || "").toLowerCase().includes(term))
+  );
 
   async function handleDelete(id, name) {
     if (!window.confirm(`Delete ${name} and all their records? This cannot be undone.`)) return;
     try {
       await patientApi.deletePatient(id);
-      loadPatients();
+      reload();
       showToast(`${name} was deleted.`, { type: "success" });
     } catch {
-      setError("Could not delete patient.");
       showToast("Could not delete patient.", { type: "error" });
     }
   }
 
+  const countLabel = loading
+    ? "Loading patients…"
+    : `${patients.length} patient${patients.length !== 1 ? "s" : ""} in your care`;
+
   return (
     <AppLayout>
-      <div className={styles.headerRow}>
-        <div>
-          <h1>Patients</h1>
-          {!loading && (
-            <p className={styles.count}>
-              {search
-                ? `${filteredPatients.length} of ${patients.length} patient${patients.length !== 1 ? "s" : ""}`
-                : `${patients.length} patient${patients.length !== 1 ? "s" : ""}`}
-            </p>
-          )}
-        </div>
-        <Button onClick={() => navigate("/patients/new")} icon={<FiUserPlus />}>
-          Add Patient
-        </Button>
-      </div>
+      <PageHeader
+        breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Patients" }]}
+        title="Patients"
+        subtitle={countLabel}
+        actions={<Button to="/patients/new" icon={<FiUserPlus size={15} />}>Register patient</Button>}
+      />
 
-      {!loading && patients.length > 0 && (
-        <div className={styles.searchBar}>
-          <FiSearch size={15} className={styles.searchIcon} />
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder="Search patients by name…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search patients"
-          />
-          {search && (
-            <button
-              className={styles.searchClear}
-              onClick={() => setSearch("")}
-              aria-label="Clear search"
-            >
-              <FiX size={15} />
-            </button>
-          )}
+      {error && (
+        <div className={styles.error} role="alert">
+          <FiAlertTriangle size={16} /> {error}
         </div>
       )}
 
-      {loading && (
-        <div className={styles.patientGrid}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={styles.patientCard}>
-              <Skeleton circle width="38px" height="38px" />
-              <div className={styles.patientInfo}>
-                <Skeleton width="45%" height="1rem" />
-                <Skeleton width="65%" height="0.8rem" className={styles.skeletonGap} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {error && <p className={styles.error}>{error}</p>}
-
-      {!loading && patients.length === 0 && (
-        <div className={styles.empty}>
-          <FiUser size={40} className={styles.emptyIcon} />
-          <p>No patients yet.</p>
-          <p className={styles.emptyHint}>Add your first patient to begin the onboarding process.</p>
-          <Button onClick={() => navigate("/patients/new")} icon={<FiUserPlus />}>
-            Add first patient
-          </Button>
-        </div>
-      )}
-
-      {!loading && patients.length > 0 && filteredPatients.length === 0 && (
-        <div className={styles.empty}>
-          <FiSearch size={40} className={styles.emptyIcon} />
-          <p>No patients match "{search}".</p>
-          <p className={styles.emptyHint}>Try a different name, or clear the search.</p>
-        </div>
-      )}
-
-      <div className={styles.patientGrid}>
-        {filteredPatients.map((patient) => (
-          <div key={patient.id} className={styles.patientCard}>
-            <Avatar name={patient.fullName} size="sm" />
-            <div className={styles.patientInfo}>
-              <h3 className={styles.patientName}>{patient.fullName}</h3>
-              <p className={styles.patientMeta}>
-                Age {patient.age} &middot; {patient.gender} &middot; {patient.relationshipToCaregiver}
-              </p>
-            </div>
-            <div className={styles.patientActions}>
-              <Link to={`/patients/${patient.id}`} className={styles.viewBtn} aria-label={`View ${patient.fullName}`}>
-                <FiEye size={16} />
-                <span>View</span>
-              </Link>
-              <button
-                className={styles.deleteBtn}
-                onClick={() => handleDelete(patient.id, patient.fullName)}
-                aria-label={`Delete ${patient.fullName}`}
-              >
-                <FiTrash2 size={15} />
+      <div className={styles.panel}>
+        {/* ── Toolbar ─────────────────────────────────────── */}
+        <div className={styles.toolbar}>
+          <div className={styles.searchBar}>
+            <FiSearch size={15} className={styles.searchIcon} />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search by name or location…"
+              value={search}
+              onChange={(e) => updateSearch(e.target.value)}
+              aria-label="Search patients"
+            />
+            {search && (
+              <button className={styles.searchClear} onClick={() => updateSearch("")} aria-label="Clear search">
+                <FiX size={15} />
               </button>
-            </div>
+            )}
           </div>
-        ))}
+
+          <div className={styles.filters} role="group" aria-label="Filter by sepsis risk">
+            {FILTERS.map(({ key, label }) => {
+              const count = key === "all" ? patients.length : patients.filter((p) => matchesFilter(p, key)).length;
+              return (
+                <button
+                  key={key}
+                  className={`${styles.filterChip} ${filter === key ? styles.filterChipActive : ""}`}
+                  onClick={() => setFilter(key)}
+                  aria-pressed={filter === key}
+                >
+                  {label}
+                  {!loading && <span className={styles.chipCount}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Loading ─────────────────────────────────────── */}
+        {loading && (
+          <div className={styles.skeletonList}>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={styles.skeletonRow}>
+                <Skeleton circle width="34px" height="34px" />
+                <Skeleton width="35%" height="0.95rem" />
+                <Skeleton width="15%" height="0.95rem" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Empty states ────────────────────────────────── */}
+        {!loading && patients.length === 0 && !error && (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon}><FiUsers size={26} /></span>
+            <p className={styles.emptyTitle}>No patients yet</p>
+            <p className={styles.emptyHint}>Register your first patient to begin their onboarding assessment.</p>
+            <Button to="/patients/new" icon={<FiUserPlus size={15} />}>Register patient</Button>
+          </div>
+        )}
+
+        {!loading && patients.length > 0 && visible.length === 0 && (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon}><FiSearch size={24} /></span>
+            <p className={styles.emptyTitle}>No matching patients</p>
+            <p className={styles.emptyHint}>Try a different name, or clear the search and filters.</p>
+            <Button variant="secondary" onClick={() => { updateSearch(""); setFilter("all"); }}>
+              Clear search &amp; filters
+            </Button>
+          </div>
+        )}
+
+        {/* ── Table ───────────────────────────────────────── */}
+        {!loading && visible.length > 0 && (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th className={styles.colMd}>Age / Gender</th>
+                  <th className={styles.colLg}>Relationship</th>
+                  <th>Sepsis risk</th>
+                  <th className={styles.colMd}>Last assessed</th>
+                  <th aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <Link to={`/patients/${p.id}`} className={styles.patientCell}>
+                        <Avatar name={p.fullName} size="sm" />
+                        <span className={styles.patientText}>
+                          <span className={styles.patientName}>
+                            {p.fullName}
+                            {p.risk?.referral_recommended && (
+                              <span className={styles.referralFlag} title="Referral recommended">
+                                <FiAlertTriangle size={12} /> Referral
+                              </span>
+                            )}
+                          </span>
+                          <span className={styles.patientSub}>
+                            {[p.location, `${p.age} yrs`].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
+                      </Link>
+                    </td>
+                    <td className={`${styles.colMd} ${styles.muted}`}>{p.age} · {p.gender}</td>
+                    <td className={`${styles.colLg} ${styles.muted}`}>{p.relationshipToCaregiver}</td>
+                    <td><RiskBadge level={sepsisLevel(p)} /></td>
+                    <td className={`${styles.colMd} ${styles.muted}`}>{formatDate(p.assessedAt)}</td>
+                    <td>
+                      <div className={styles.rowActions}>
+                        <button
+                          className={styles.deleteBtn}
+                          onClick={() => handleDelete(p.id, p.fullName)}
+                          aria-label={`Delete ${p.fullName}`}
+                          title="Delete patient"
+                        >
+                          <FiTrash2 size={15} />
+                        </button>
+                        <Link to={`/patients/${p.id}`} className={styles.openBtn} aria-label={`Open ${p.fullName}`}>
+                          <span>Open</span>
+                          <FiChevronRight size={15} />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

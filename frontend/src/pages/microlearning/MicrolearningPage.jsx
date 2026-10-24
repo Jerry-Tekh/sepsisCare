@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
-  FiArrowLeft, FiBookmark, FiBookOpen,
+  FiBookmark, FiBookOpen,
   FiAlertTriangle, FiCheckCircle,
 } from "react-icons/fi";
 import { RiMedicineBottleLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
+import PageHeader from "../../components/common/PageHeader.jsx";
+import PatientTabs from "../../components/patients/PatientTabs.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
 import Skeleton from "../../components/common/Skeleton.jsx";
 import MaterialDetail from "./MaterialDetail.jsx";
@@ -40,7 +42,6 @@ const TRACK_COLORS = {
 
 export default function MicrolearningPage() {
   const { id: patientId } = useParams();
-  const navigate          = useNavigate();
   const [searchParams]    = useSearchParams();
   const highlightId       = searchParams.get("highlight");
 
@@ -130,11 +131,11 @@ export default function MicrolearningPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className={styles.pageHeader}>
-          <Skeleton width="140px" height="0.85rem" />
-          <Skeleton width="60%" height="1.5rem" className={styles.skeletonGap} />
-          <Skeleton width="80%" height="0.9rem" className={styles.skeletonGap} />
-        </div>
+        <PageHeader
+          title={<Skeleton width="220px" height="1.5rem" />}
+          subtitle={<Skeleton width="60%" height="0.9rem" />}
+        />
+        <PatientTabs patientId={patientId} />
         <div className={styles.layout}>
           <div className={styles.listPanel} style={{ padding: "0.85rem" }}>
             {[0, 1, 2, 3].map((i) => (
@@ -149,15 +150,17 @@ export default function MicrolearningPage() {
 
   return (
     <AppLayout>
-      <div className={styles.pageHeader}>
-        <button className={styles.backBtn} onClick={() => navigate(`/patients/${patientId}`)}>
-          <FiArrowLeft size={15} /> Back to {patient?.fullName}
-        </button>
-        <h1>Microlearning Library</h1>
-        <p className={styles.subtitle}>
-          Patient-specific care guides for <strong>{patient?.fullName}</strong>. Assign guides to the care plan and download for offline reference.
-        </p>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Patients", to: "/patients" },
+          { label: patient?.fullName || "Patient", to: `/patients/${patientId}` },
+          { label: "Care Guides" },
+        ]}
+        title="Care Guides"
+        subtitle={<>Patient-specific care guides for <strong>{patient?.fullName}</strong>. Assign guides to the care plan and download them for offline reference.</>}
+      />
+      <PatientTabs patientId={patientId} />
 
       {error && <div className={styles.errorBox}><FiAlertTriangle size={15}/> {error}</div>}
 
