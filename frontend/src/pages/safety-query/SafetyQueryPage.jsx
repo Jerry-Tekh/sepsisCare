@@ -4,9 +4,11 @@ import {
   RiRobot2Line, RiSendPlaneFill, RiAddLine,
 } from "react-icons/ri";
 import {
-  FiUser, FiArrowLeft, FiExternalLink, FiClock,
+  FiUser, FiExternalLink, FiClock,
 } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
+import PageHeader from "../../components/common/PageHeader.jsx";
+import PatientTabs from "../../components/patients/PatientTabs.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
 import ReferralAlert from "../../components/safety-query/ReferralAlert.jsx";
 import * as safetyQueryApi from "../../api/safetyQueryApi";
@@ -162,15 +164,17 @@ export default function SafetyQueryPage() {
       )}
 
       {/* Page header */}
-      <div className={styles.pageHeader}>
-        <button className={styles.backBtn} onClick={() => navigate(`/patients/${patientId}`)}>
-          <FiArrowLeft size={15} /> Back to {patient?.fullName}
-        </button>
-        <h1>Safety Query</h1>
-        <p className={styles.subtitle}>
-          Ask any question about safe care for <strong>{patient?.fullName}</strong>. The AI has access to their full risk profile.
-        </p>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", to: "/dashboard" },
+          { label: "Patients", to: "/patients" },
+          { label: patient?.fullName || "Patient", to: `/patients/${patientId}` },
+          { label: "Safety Query" },
+        ]}
+        title="Safety Query"
+        subtitle={<>Ask any question about safe care for <strong>{patient?.fullName}</strong>. The AI has access to their full risk profile.</>}
+      />
+      <PatientTabs patientId={patientId} />
 
       {error && <div className={styles.errorBox}>{error}</div>}
 

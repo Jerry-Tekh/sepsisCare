@@ -1,17 +1,83 @@
 :root {
-  --color-bg:           #f5f7fa;
-  --color-surface:      #ffffff;
-  --color-primary:      #2563a6;
-  --color-primary-dark: #1c4f82;
-  --color-text:         #1f2937;
-  --color-text-muted:   #6b7280;
-  --color-border:       #e2e8f0;
-  --color-danger:       #c0392b;
-  --color-success:      #2f855a;
-  --color-warning:      #b7791f;
-  --radius:             10px;
-  --shadow:             0 1px 3px rgba(0, 0, 0, 0.08);
+  --color-bg:             #f5f7fa;
+  --color-surface:        #ffffff;
+  --color-surface-hover:  #edf2f7;
+  --color-primary:        #2563a6;
+  --color-primary-dark:   #1c4f82;
+  --color-primary-tint:   #e8f0fa;
+  --color-primary-border: #bfdbfe;
+  --color-text:           #1f2937;
+  --color-text-muted:     #6b7280;
+  --color-border:         #e2e8f0;
+  --color-danger:         #c0392b;
+  --color-danger-tint:    #fbe9e7;
+  --color-danger-border:  #fca5a5;
+  --color-success:        #2f855a;
+  --color-success-tint:   #e6f4ea;
+  --color-warning:        #b7791f;
+  --color-warning-tint:   #fdf3dc;
+  --color-orange:         #c0641a;
+  --color-orange-tint:    #fff3e6;
+  --radius:               10px;
+  --shadow:               0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md:            0 8px 24px rgba(15, 23, 42, 0.14);
+  --sidebar-width:        248px;
+  --topbar-height:        60px;
+  color-scheme: light;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Dark theme — applied when the user's system prefers dark and they haven't
+   explicitly chosen light, or when they've explicitly chosen dark via the
+   navbar toggle (persisted to localStorage, see ThemeContext). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg:             #0f1520;
+    --color-surface:        #19212f;
+    --color-surface-hover:  #222c3d;
+    --color-primary:        #5b9fe3;
+    --color-primary-dark:   #3d7dc0;
+    --color-primary-tint:   #1d2c40;
+    --color-primary-border: #2d4a6e;
+    --color-text:           #e8ecf2;
+    --color-text-muted:     #94a3b8;
+    --color-border:         #2a3344;
+    --color-danger:         #f0766a;
+    --color-danger-tint:    #3a2024;
+    --color-danger-border:  #6b3230;
+    --color-success:        #4fb784;
+    --color-success-tint:   #17302a;
+    --color-warning:        #e0ad4e;
+    --color-warning-tint:   #332a16;
+    --color-orange:         #e8a159;
+    --color-orange-tint:    #35281a;
+    --shadow:               0 1px 3px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg:             #0f1520;
+  --color-surface:        #19212f;
+  --color-surface-hover:  #222c3d;
+  --color-primary:        #5b9fe3;
+  --color-primary-dark:   #3d7dc0;
+  --color-primary-tint:   #1d2c40;
+  --color-primary-border: #2d4a6e;
+  --color-text:           #e8ecf2;
+  --color-text-muted:     #94a3b8;
+  --color-border:         #2a3344;
+  --color-danger:         #f0766a;
+  --color-danger-tint:    #3a2024;
+  --color-danger-border:  #6b3230;
+  --color-success:        #4fb784;
+  --color-success-tint:   #17302a;
+  --color-warning:        #e0ad4e;
+  --color-warning-tint:   #332a16;
+  --color-orange:         #e8a159;
+  --color-orange-tint:    #35281a;
+  --shadow:               0 1px 3px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
 }
 
 * {
@@ -26,6 +92,7 @@ body,
   min-height: 100vh;
   background-color: var(--color-bg);
   color: var(--color-text);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 body {
