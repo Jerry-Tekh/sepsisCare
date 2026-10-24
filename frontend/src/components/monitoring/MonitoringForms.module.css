@@ -1,0 +1,156 @@
+/* ── Fields ───────────────────────────────────────────────── */
+.vitalsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.85rem;
+  min-width: 0;
+}
+
+.fieldLabel { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); }
+
+.inputUnit { display: flex; align-items: center; gap: 0.35rem; }
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px; /* prevents iOS zoom on focus */
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea.input { resize: vertical; }
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.unit  { font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap; }
+.slash { color: var(--color-text-muted); }
+.spanFull { grid-column: 1 / -1; }
+
+.hint { margin: 0 0 0.75rem; font-size: 0.82rem; color: var(--color-text-muted); }
+
+.error {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+  font-size: 0.86rem;
+}
+
+.result { margin-top: 1rem; }
+
+/* ── Check-in questions ───────────────────────────────────── */
+.questions {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.question:last-child { border-bottom: none; }
+
+.questionText { font-size: 0.88rem; line-height: 1.35; }
+
+.redFlag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: 1px;
+}
+
+.yesNo {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.choice {
+  min-width: 48px;
+  padding: 0.4rem 0.7rem;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.choice + .choice { border-left: 1px solid var(--color-border); }
+.choice:hover { background: var(--color-surface-hover); }
+
+.choiceYes, .choiceYes:hover { background: var(--color-danger-tint); color: var(--color-danger); }
+.choiceNo,  .choiceNo:hover  { background: var(--color-success-tint); color: var(--color-success); }
+
+.allNo {
+  margin: 0 0 0.9rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.allNo:hover { text-decoration: underline; }
+
+/* ── Guidance panel ───────────────────────────────────────── */
+.guidance {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-left-width: 5px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+.guidance p { margin: 0.2rem 0 0; }
+.guidanceIcon { flex-shrink: 0; margin-top: 1px; }
+
+.guidance_URGENT { background: var(--color-danger-tint);  border-color: var(--color-danger-border); border-left-color: var(--color-danger); }
+.guidance_URGENT strong, .guidance_URGENT .guidanceIcon { color: var(--color-danger); }
+.guidance_WATCH  { background: var(--color-warning-tint); border-left-color: var(--color-warning); }
+.guidance_WATCH strong, .guidance_WATCH .guidanceIcon { color: var(--color-warning); }
+.guidance_NORMAL { background: var(--color-success-tint); border-left-color: var(--color-success); }
+.guidance_NORMAL strong, .guidance_NORMAL .guidanceIcon { color: var(--color-success); }
+
+.reasons { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+.reasons li { margin: 0.1rem 0; }
+
+@media (max-width: 420px) {
+  .vitalsGrid { grid-template-columns: minmax(0, 1fr); }
+}

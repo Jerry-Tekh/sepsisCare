@@ -24,6 +24,11 @@ const {
   materialRouter: microlearningMaterialRouter,
 } = require("./modules/microlearning/microlearning.routes");
 
+const {
+  patientRouter: monitoringPatientRouter,
+  entryRouter: monitoringEntryRouter,
+} = require("./modules/monitoring/monitoring.routes");
+
 const app = express();
 
 app.set("trust proxy", 1);
@@ -52,6 +57,10 @@ app.use("/api/safety-query", apiLimiter, authMiddleware, safetyQuerySessionRoute
 // Microlearning — patient-scoped (list / generate) + material-scoped (view / assign / download)
 app.use("/api/patients/:patientId/microlearning", apiLimiter, authMiddleware, microlearningPatientRouter);
 app.use("/api/microlearning", apiLimiter, authMiddleware, microlearningMaterialRouter);
+
+// Monitoring — patient-scoped vitals / check-ins + entry-scoped delete
+app.use("/api/patients/:patientId/monitoring", apiLimiter, authMiddleware, monitoringPatientRouter);
+app.use("/api/monitoring", apiLimiter, authMiddleware, monitoringEntryRouter);
 
 // 404 handler for unmatched API routes
 app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));

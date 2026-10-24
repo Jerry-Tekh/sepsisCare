@@ -97,6 +97,11 @@ CORS is configured with `credentials: true` and an explicit allowed origin. All 
 3. Onboarding completes when all activated clinical pathways are satisfied → Risk Profile generated automatically.
 4. Create Patient B → fully separate conversation, pathways, and risk profile.
 5. View risk profiles and conversation history from each patient's page; see aggregate stats on the dashboard.
+6. Open a patient's **Monitoring** tab → record vital signs and complete the daily check-in. Each entry is screened as Normal / Watch / Urgent, trends are charted, and recent Watch/Urgent entries appear under "Needs attention" on the dashboard.
+
+### Monitoring alert thresholds (clinical sign-off required)
+
+Alert levels are computed server-side in `backend/src/modules/monitoring/monitoring.rules.js`, adapted from NEWS2 bands, qSOFA and public sepsis red-flag guidance. They are conservative screening thresholds for adult patients — **not** diagnostic rules — and must be reviewed by a clinical advisor before real-world use. Oxygen thresholds do not suit patients with chronic lung disease who have a lower clinician-set target.
 
 ---
 

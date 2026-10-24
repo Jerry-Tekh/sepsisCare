@@ -49,6 +49,8 @@ model Patient {
   riskProfiles            RiskProfile[]
   safetyQueries           SafetyQuery[]
   microlearningMaterials  MicrolearningMaterial[]
+  vitalReadings           VitalReading[]
+  checkIns                DailyCheckIn[]
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
 
@@ -205,4 +207,56 @@ model MicrolearningMaterial {
 
   @@index([patientId])
   @@map("microlearning_materials")
+}
+
+// ── Phase 3: Monitoring (vital signs + daily check-ins) ────────────────
+
+// Screening level computed server-side from each entry (see monitoring.rules.js).
+enum AlertLevel {
+  NORMAL
+  WATCH   // contact a clinician / monitor closely
+  URGENT  // possible sepsis — seek emergency care now
+}
+
+model VitalReading {
+  id               String     @id @default(uuid())
+  patientId        String
+  patient          Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  recordedAt       DateTime   @default(now())
+  temperatureC     Float?
+  heartRate        Int?       // beats per minute
+  respiratoryRate  Int?       // breaths per minute
+  systolicBP       Int?       // mmHg
+  diastolicBP      Int?       // mmHg
+  oxygenSaturation Int?       // SpO2 %
+  notes            String?
+  alertLevel       AlertLevel @default(NORMAL)
+  // alerts: [{ field, level, message }]
+  alerts           Json       @default("[]")
+  createdAt        DateTime   @default(now())
+
+  @@index([patientId, recordedAt])
+  @@map("vital_readings")
+}
+
+model DailyCheckIn {
+  id                String     @id @default(uuid())
+  patientId         String
+  patient           Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  feverOrChills     Boolean    @default(false)
+  confusion         Boolean    @default(false) // new confusion, very sleepy, hard to wake
+  breathingTrouble  Boolean    @default(false) // breathless or breathing very fast
+  skinChanges       Boolean    @default(false) // mottled, bluish or very pale skin
+  severePain        Boolean    @default(false) // severe pain or "feels like they might die"
+  reducedUrine      Boolean    @default(false) // little or no urine in the last 12 hours
+  woundWorse        Boolean    @default(false) // wound redder, swollen, hot, pus or smelly
+  notEatingDrinking Boolean    @default(false)
+  feelsWorse        Boolean    @default(false) // generally more unwell than yesterday
+  notes             String?
+  alertLevel        AlertLevel @default(NORMAL)
+  alerts            Json       @default("[]")
+  createdAt         DateTime   @default(now())
+
+  @@index([patientId, createdAt])
+  @@map("daily_check_ins")
 }
