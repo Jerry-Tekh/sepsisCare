@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle,
-  FiClipboard, FiMessageSquare, FiBookOpen, FiUser,
+  FiClipboard, FiMessageSquare, FiBookOpen, FiUser, FiActivity, FiCheckCircle,
 } from "react-icons/fi";
 import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -15,11 +15,14 @@ import Avatar from "../../components/common/Avatar.jsx";
 import RiskBadge from "../../components/patients/RiskBadge.jsx";
 import PatientTabs from "../../components/patients/PatientTabs.jsx";
 import ConversationHistory from "../../components/discovery/ConversationHistory.jsx";
+import AlertLevelBadge from "../../components/monitoring/AlertLevelBadge.jsx";
+import { currentStatus, formatDateTime, isToday } from "../../components/monitoring/vitals.js";
 import * as patientApi      from "../../api/patientApi";
 import * as discoveryApi    from "../../api/discoveryApi";
 import * as riskApi         from "../../api/riskApi";
 import * as safetyQueryApi  from "../../api/safetyQueryApi";
 import * as microlearningApi from "../../api/microlearningApi";
+import * as monitoringApi   from "../../api/monitoringApi";
 import styles from "./PatientProfile.module.css";
 
 const RISK_FIELDS = [
@@ -47,6 +50,18 @@ export default function PatientProfile() {
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState("");
   const [starting,        setStarting]        = useState(false);
+  const [monitoring,      setMonitoring]      = useState(null); // { readings, checkIns } | null
+
+  // Loaded separately so a monitoring failure never blocks the patient record.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([monitoringApi.listVitals(id, 20), monitoringApi.listCheckIns(id, 20)])
+      .then(([v, c]) => {
+        if (!cancelled) setMonitoring({ readings: v.data.readings, checkIns: c.data.checkIns });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -274,6 +289,8 @@ export default function PatientProfile() {
 
         {/* ── Side column ──────────────────────────────────── */}
         <div className={styles.sideCol}>
+          {monitoring && <MonitoringCard patientId={id} {...monitoring} />}
+
           <Card title="Patient details" icon={<FiUser />}>
             <dl className={styles.details}>
               <dt>Full name</dt>      <dd>{patient.fullName}</dd>
@@ -331,5 +348,60 @@ export default function PatientProfile() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+function MonitoringCard({ patientId, readings, checkIns }) {
+  const status = currentStatus(readings, checkIns);
+  const latest = readings[0];
+  const checkedInToday = checkIns.some((c) => isToday(c.createdAt));
+
+  const latestValues = latest && [
+    latest.temperatureC != null     && ["Temp", `${latest.temperatureC} °C`],
+    latest.heartRate != null        && ["Heart rate", `${latest.heartRate} bpm`],
+    latest.respiratoryRate != null  && ["Breathing", `${latest.respiratoryRate}/min`],
+    latest.systolicBP != null       && ["BP", `${latest.systolicBP}${latest.diastolicBP != null ? `/${latest.diastolicBP}` : ""}`],
+    latest.oxygenSaturation != null && ["SpO₂", `${latest.oxygenSaturation}%`],
+  ].filter(Boolean);
+
+  return (
+    <Card
+      title="Monitoring"
+      icon={<FiActivity />}
+      actions={status && <AlertLevelBadge level={status.alertLevel} />}
+    >
+      {status?.alertLevel && status.alertLevel !== "NORMAL" && (
+        <p className={`${styles.monitorAlert} ${styles[`monitorAlert_${status.alertLevel}`]}`}>
+          {status.alerts[0]?.message}
+        </p>
+      )}
+
+      <div className={styles.statusRow}>
+        <span className={styles.statusLabel}>Today's check-in</span>
+        {checkedInToday
+          ? <span className={styles.checkDone}><FiCheckCircle size={13} /> Done</span>
+          : <Badge tone="neutral">Not done</Badge>}
+      </div>
+
+      {latestValues?.length > 0 ? (
+        <>
+          <div className={styles.vitalsMini}>
+            {latestValues.map(([label, value]) => (
+              <div key={label} className={styles.vitalMini}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
+          <p className={styles.cardMeta}>Latest vitals: {formatDateTime(latest.recordedAt)}</p>
+        </>
+      ) : (
+        <p className={styles.featureDesc}>No vital signs recorded yet.</p>
+      )}
+
+      <Link to={`/patients/${patientId}/monitoring`} className={styles.featureLink}>
+        {checkedInToday ? "Open monitoring" : "Do today's check-in"} <FiArrowRight size={14} />
+      </Link>
+    </Card>
   );
 }

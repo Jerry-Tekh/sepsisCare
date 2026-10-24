@@ -1,0 +1,85 @@
+.chart {
+  margin: 0;
+  padding: 0.85rem 0.9rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.title  { font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); }
+.latest { font-size: 0.8rem; color: var(--color-text-muted); white-space: nowrap; }
+.latest strong { font-size: 1.15rem; color: var(--color-text); }
+.none   { font-size: 0.78rem; color: var(--color-text-muted); }
+
+.plot { position: relative; min-height: 130px; }
+
+.band     { fill: var(--color-success-tint); }
+.baseline { stroke: var(--color-border); stroke-width: 1; }
+.crosshair { stroke: var(--color-text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+
+.axisLabel {
+  font-size: 10px;
+  fill: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.line {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* 2px surface ring keeps overlapping markers distinct */
+.marker        { stroke: var(--color-surface); stroke-width: 2; fill: var(--color-primary); transition: r 0.1s; }
+.marker_WATCH  { fill: var(--color-warning); }
+.marker_URGENT { fill: var(--color-danger); }
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.tip_WATCH  { color: var(--color-warning); font-weight: 700; }
+.tip_URGENT { color: var(--color-danger);  font-weight: 700; }
+.tipDate    { color: var(--color-text-muted); font-size: 0.72rem; }
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.legendBand {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-success-tint);
+  border: 1px solid var(--color-success);
+}

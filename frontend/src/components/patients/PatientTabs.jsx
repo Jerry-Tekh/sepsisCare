@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { FiUser, FiBookOpen } from "react-icons/fi";
+import { FiUser, FiBookOpen, FiActivity } from "react-icons/fi";
 import { RiQuestionAnswerLine } from "react-icons/ri";
 import styles from "./PatientTabs.module.css";
 
@@ -8,6 +8,7 @@ export default function PatientTabs({ patientId }) {
   const base = `/patients/${patientId}`;
   const tabs = [
     { to: base,                    label: "Overview",     icon: FiUser, end: true },
+    { to: `${base}/monitoring`,    label: "Monitoring",   icon: FiActivity },
     { to: `${base}/safety-query`,  label: "Safety Query", icon: RiQuestionAnswerLine },
     { to: `${base}/microlearning`, label: "Care Guides",  icon: FiBookOpen },
   ];

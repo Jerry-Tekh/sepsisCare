@@ -271,3 +271,10 @@
 @media (max-width: 420px) {
   .statsGrid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Monitoring WATCH alerts are amber rather than red. */
+.attentionWatch {
+  border-color: var(--color-warning-tint);
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-tint);
+}

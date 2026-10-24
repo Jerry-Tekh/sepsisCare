@@ -1,0 +1,118 @@
+.error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+
+/* ── Status ───────────────────────────────────────────────── */
+.status { margin-bottom: 1.25rem; }
+
+.statusMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.statusEmpty {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* Forms sit in the right column on desktop but come first on mobile. */
+.mainCol { min-width: 0; grid-column: 1; grid-row: 1; }
+.sideCol { min-width: 0; grid-column: 2; grid-row: 1; }
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.empty { margin: 0; color: var(--color-text-muted); font-size: 0.88rem; }
+
+.doneToday {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-success);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ── History ──────────────────────────────────────────────── */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segment {
+  padding: 0.35rem 0.7rem;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.segment + .segment { border-left: 1px solid var(--color-border); }
+
+.segmentActive { background: var(--color-primary-tint); color: var(--color-primary); }
+
+.history { list-style: none; margin: 0; padding: 0; }
+
+.historyItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.historyItem:last-child { border-bottom: none; }
+
+.historyText { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.historyMain { font-size: 0.88rem; font-weight: 600; overflow-wrap: anywhere; }
+.historyMeta { font-size: 0.78rem; color: var(--color-text-muted); overflow-wrap: anywhere; }
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.deleteBtn:hover { background: var(--color-danger-tint); color: var(--color-danger); }
+
+@media (max-width: 1024px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .mainCol, .sideCol { grid-column: 1; grid-row: auto; }
+}

@@ -11,9 +11,12 @@ import Button from "../../components/common/Button.jsx";
 import Skeleton from "../../components/common/Skeleton.jsx";
 import Avatar from "../../components/common/Avatar.jsx";
 import RiskBadge from "../../components/patients/RiskBadge.jsx";
+import AlertLevelBadge from "../../components/monitoring/AlertLevelBadge.jsx";
+import { formatDateTime as formatDateTimeShort } from "../../components/monitoring/vitals.js";
 import usePatientsWithRisk, { sepsisLevel } from "../../hooks/usePatientsWithRisk.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import * as patientApi from "../../api/patientApi";
+import * as monitoringApi from "../../api/monitoringApi";
 import styles from "./Dashboard.module.css";
 
 // Sepsis Alliance "TIME" mnemonic for spotting sepsis at home.
@@ -38,6 +41,13 @@ function greeting() {
   return "Good evening";
 }
 
+// URGENT monitoring alert > WATCH alert > assessment-only flag.
+function alertRank(p) {
+  if (p.monitoringAlert?.alertLevel === "URGENT") return 2;
+  if (p.monitoringAlert?.alertLevel === "WATCH") return 1;
+  return 0;
+}
+
 function formatDate(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—";
 }
@@ -49,19 +59,32 @@ export default function Dashboard() {
   const [summaryError, setSummaryError] = useState("");
   const { patients, loading: patientsLoading, error: patientsError } = usePatientsWithRisk();
 
+  const [monitoringAlerts, setMonitoringAlerts] = useState([]);
+
   useEffect(() => {
     patientApi
       .getDashboardSummary()
       .then(({ data }) => setSummary(data))
       .catch(() => setSummaryError("Could not load dashboard summary."))
       .finally(() => setSummaryLoading(false));
+
+    // Best-effort — the rest of the dashboard works without it.
+    monitoringApi
+      .getRecentAlerts()
+      .then(({ data }) => setMonitoringAlerts(data.alerts))
+      .catch(() => {});
   }, []);
 
   const firstName = user?.fullName?.trim().split(/\s+/)[0] || "";
   const highRiskCount = patients.filter((p) => sepsisLevel(p) === "high").length;
 
-  // Flag anyone with a referral recommendation or a high sepsis risk.
-  const attention = patients.filter((p) => p.risk?.referral_recommended || sepsisLevel(p) === "high");
+  // Recent monitoring alerts come first (urgent before watch), then anyone
+  // with a referral recommendation or a high sepsis risk from assessment.
+  const alertByPatient = new Map(monitoringAlerts.map((a) => [a.patientId, a]));
+  const attention = patients
+    .filter((p) => alertByPatient.has(p.id) || p.risk?.referral_recommended || sepsisLevel(p) === "high")
+    .map((p) => ({ ...p, monitoringAlert: alertByPatient.get(p.id) }))
+    .sort((a, b) => alertRank(b) - alertRank(a));
   const recent = patients.slice(0, 5);
 
   const stats = [
@@ -111,26 +134,34 @@ export default function Dashboard() {
             {!patientsLoading && attention.length === 0 && (
               <p className={styles.emptyText}>
                 <FiCheckCircle size={15} className={styles.okIcon} />
-                No patients are currently flagged for referral or high sepsis risk.
+                No monitoring alerts, referrals or high sepsis risks right now.
               </p>
             )}
             {!patientsLoading && attention.length > 0 && (
               <ul className={styles.attentionList}>
-                {attention.map((p) => (
-                  <li key={p.id}>
-                    <Link to={`/patients/${p.id}`} className={styles.attentionItem}>
-                      <Avatar name={p.fullName} size="sm" />
-                      <div className={styles.attentionInfo}>
-                        <span className={styles.attentionName}>{p.fullName}</span>
-                        <span className={styles.attentionReason}>
-                          {p.risk?.referral_reason || "High sepsis risk on latest assessment."}
-                        </span>
-                      </div>
-                      <RiskBadge level={sepsisLevel(p)} />
-                      <FiArrowRight size={15} className={styles.chevron} />
-                    </Link>
-                  </li>
-                ))}
+                {attention.map((p) => {
+                  const alert = p.monitoringAlert;
+                  return (
+                    <li key={p.id}>
+                      <Link
+                        to={`/patients/${p.id}${alert ? "/monitoring" : ""}`}
+                        className={`${styles.attentionItem} ${alert?.alertLevel === "WATCH" ? styles.attentionWatch : ""}`}
+                      >
+                        <Avatar name={p.fullName} size="sm" />
+                        <div className={styles.attentionInfo}>
+                          <span className={styles.attentionName}>{p.fullName}</span>
+                          <span className={styles.attentionReason}>
+                            {alert
+                              ? `${alert.message} (${alert.type === "vitals" ? "vital signs" : "check-in"}, ${formatDateTimeShort(alert.at)})`
+                              : p.risk?.referral_reason || "High sepsis risk on latest assessment."}
+                          </span>
+                        </div>
+                        {alert ? <AlertLevelBadge level={alert.alertLevel} /> : <RiskBadge level={sepsisLevel(p)} />}
+                        <FiArrowRight size={15} className={styles.chevron} />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Card>

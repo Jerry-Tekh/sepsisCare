@@ -202,3 +202,43 @@
 @media (max-width: 960px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ── Monitoring card ──────────────────────────────────────── */
+.monitorAlert {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.monitorAlert_URGENT { background: var(--color-danger-tint);  color: var(--color-danger); }
+.monitorAlert_WATCH  { background: var(--color-warning-tint); color: var(--color-warning); }
+
+.checkDone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-success);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.vitalsMini {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.vitalMini {
+  display: flex;
+  flex-direction: column;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: var(--color-bg);
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+.vitalMini strong { font-size: 0.92rem; color: var(--color-text); }
