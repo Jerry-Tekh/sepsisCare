@@ -16,13 +16,13 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: var(--color-primary-tint);
+  background-color: #e8f0fa;
   color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .avatarRight {
-  background-color: var(--color-success-tint);
+  background-color: #e0f0e8;
   color: var(--color-success);
 }
 
@@ -38,7 +38,7 @@
 }
 
 .assistant {
-  background-color: var(--color-surface);
+  background-color: #ffffff;
   border: 1px solid var(--color-border);
   border-bottom-left-radius: 4px;
   color: var(--color-text);

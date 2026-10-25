@@ -12,7 +12,7 @@
 .subtitle { color:var(--color-text-muted); font-size:0.9rem; margin:0; }
 
 .errorBox {
-  background:var(--color-danger-tint); color:var(--color-danger);
+  background:#fbe9e7; color:var(--color-danger);
   border-radius:var(--radius); padding:0.75rem 1rem;
   margin-bottom:1rem; font-size:0.9rem;
 }
@@ -22,7 +22,7 @@
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 1rem;
-  height: calc(100dvh - 300px);
+  height: calc(100vh - 230px);
   min-height: 500px;
 }
 
@@ -65,15 +65,15 @@
   transition:background-color 0.15s;
 }
 .queryItem:hover { background:var(--color-bg); }
-.queryItemActive { background:var(--color-primary-tint); border-color:var(--color-primary-border); }
-.queryItemRedFlag { border-color:var(--color-danger-border); }
+.queryItemActive { background:#e8f0fa; border-color:#bfdbfe; }
+.queryItemRedFlag { border-color:#fca5a5; }
 
 .queryTitle { font-size:0.83rem; font-weight:600; color:var(--color-text); line-height:1.3;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .queryMeta { font-size:0.72rem; color:var(--color-text-muted); display:flex; align-items:center; gap:0.25rem; }
 .redFlagBadge {
   font-size:0.7rem; font-weight:700; color:var(--color-danger);
-  background:var(--color-danger-tint); border-radius:4px; padding:0.1rem 0.4rem; align-self:flex-start;
+  background:#fbe9e7; border-radius:4px; padding:0.1rem 0.4rem; align-self:flex-start;
 }
 
 /* ── Chat panel ───────────────────────────────────────── */
@@ -132,16 +132,16 @@
 .avatar {
   display:flex; align-items:center; justify-content:center;
   width:28px; height:28px; border-radius:50%;
-  background:var(--color-primary-tint); color:var(--color-primary); flex-shrink:0;
+  background:#e8f0fa; color:var(--color-primary); flex-shrink:0;
 }
-.avatarCHW { background:var(--color-success-tint); color:var(--color-success); }
+.avatarCHW { background:#e0f0e8; color:var(--color-success); }
 
 .bubble {
   max-width:72%; border-radius:14px;
   padding:0.7rem 0.95rem;
 }
 .bubbleAI {
-  background:var(--color-surface); border:1px solid var(--color-border);
+  background:#fff; border:1px solid var(--color-border);
   border-bottom-left-radius:4px; color:var(--color-text);
 }
 .bubbleCHW {
@@ -149,7 +149,7 @@
   border-bottom-right-radius:4px;
 }
 .bubbleRedFlag {
-  background:var(--color-danger-tint); border:2px solid var(--color-danger);
+  background:#fbe9e7; border:2px solid var(--color-danger);
   color:var(--color-text);
 }
 .bubbleText { margin:0; font-size:0.92rem; line-height:1.5; word-break:break-word; }
@@ -159,13 +159,13 @@
 .linkedLabel { font-size:0.78rem; color:var(--color-text-muted); margin:0 0 0.35rem; }
 .linkedItem {
   display:inline-flex; align-items:center; gap:0.3rem;
-  background:var(--color-primary-tint); color:var(--color-primary);
+  background:#e8f0fa; color:var(--color-primary);
   border:none; border-radius:6px;
   padding:0.25rem 0.6rem; font-size:0.78rem; font-weight:600;
   cursor:pointer; margin:0.2rem 0.2rem 0 0;
   transition:background-color 0.15s;
 }
-.linkedItem:hover { background:var(--color-primary-border); }
+.linkedItem:hover { background:#bfdbfe; }
 
 /* Typing indicator */
 .typing {
@@ -186,7 +186,7 @@
 
 /* Status banners */
 .redFlagBanner {
-  background:var(--color-danger-tint); color:var(--color-danger);
+  background:#fbe9e7; color:var(--color-danger);
   border-radius:8px; padding:0.65rem 0.9rem;
   font-size:0.85rem; font-weight:700; text-align:center;
 }
