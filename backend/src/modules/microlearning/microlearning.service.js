@@ -4,6 +4,7 @@ const { generateMaterialPDF } = require("./pdf.generator");
 const { generateImageCard } = require("./imageCard.generator");
 const { NotFoundError } = require("../../errors/AppError");
 const logger = require("../../utils/logger");
+const learningGuideService = require("../learning-guides/learning-guides.service");
 
 /**
  * Auto-generates recommended microlearning materials based on a completed risk profile.
@@ -27,7 +28,8 @@ async function autoGenerateForRiskProfile(patientId, riskData) {
       });
       if (existing) continue;
 
-      const contentData = await generateOneMaterial({ patient, riskData, planItem });
+      const sources = await learningGuideService.getApprovedSourcesForTopic(planItem.topic);
+      const contentData = await generateOneMaterial({ patient, riskData, planItem, sources });
 
       await prisma.microlearningMaterial.create({
         data: {
@@ -70,7 +72,8 @@ async function requestGeneration(patientId, topic) {
     triggerContext: "CHW manual request",
   };
 
-  const contentData = await generateOneMaterial({ patient, riskData, planItem });
+  const sources = await learningGuideService.getApprovedSourcesForTopic(topic);
+  const contentData = await generateOneMaterial({ patient, riskData, planItem, sources });
 
   return prisma.microlearningMaterial.create({
     data: {

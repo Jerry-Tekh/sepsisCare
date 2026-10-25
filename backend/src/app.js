@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const env        = require("./config/env");
 const requestLogger = require("./middleware/requestLogger.middleware");
 const authMiddleware = require("./middleware/auth.middleware");
+const requireRole = require("./middleware/role.middleware");
 const errorMiddleware = require("./middleware/error.middleware");
 const { apiLimiter, authLimiter } = require("./middleware/rateLimit.middleware");
 
@@ -13,6 +14,8 @@ const authRoutes      = require("./modules/auth/auth.routes");
 const patientRoutes   = require("./modules/patient/patient.routes");
 const discoveryRoutes = require("./modules/discovery/discovery.routes");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
+const learningGuideRoutes = require("./modules/learning-guides/learning-guides.routes");
+const organizationGuideRoutes = require("./modules/organization-guides/organization-guides.routes");
 
 const {
   patientRouter: safetyQueryPatientRouter,
@@ -41,17 +44,19 @@ app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 app.use("/api/auth", authLimiter, authRoutes);
 
 // Protected routes — all require a valid JWT cookie
-app.use("/api/patients",   apiLimiter, authMiddleware, patientRoutes);
-app.use("/api/onboarding", apiLimiter, authMiddleware, discoveryRoutes);
-app.use("/api/dashboard",  apiLimiter, authMiddleware, dashboardRoutes);
+app.use("/api/patients",   apiLimiter, authMiddleware, requireRole("CAREGIVER"), patientRoutes);
+app.use("/api/onboarding", apiLimiter, authMiddleware, requireRole("CAREGIVER"), discoveryRoutes);
+app.use("/api/dashboard",  apiLimiter, authMiddleware, requireRole("CAREGIVER"), dashboardRoutes);
+app.use("/api/library/guides", apiLimiter, authMiddleware, requireRole("CAREGIVER"), learningGuideRoutes);
+app.use("/api/organization", apiLimiter, authMiddleware, requireRole("ORGANIZATION_ADMIN"), organizationGuideRoutes);
 
 // Safety Query — patient-scoped (start / list) + session-scoped (message / close)
-app.use("/api/patients/:patientId/safety-query", apiLimiter, authMiddleware, safetyQueryPatientRouter);
-app.use("/api/safety-query", apiLimiter, authMiddleware, safetyQuerySessionRouter);
+app.use("/api/patients/:patientId/safety-query", apiLimiter, authMiddleware, requireRole("CAREGIVER"), safetyQueryPatientRouter);
+app.use("/api/safety-query", apiLimiter, authMiddleware, requireRole("CAREGIVER"), safetyQuerySessionRouter);
 
 // Microlearning — patient-scoped (list / generate) + material-scoped (view / assign / download)
-app.use("/api/patients/:patientId/microlearning", apiLimiter, authMiddleware, microlearningPatientRouter);
-app.use("/api/microlearning", apiLimiter, authMiddleware, microlearningMaterialRouter);
+app.use("/api/patients/:patientId/microlearning", apiLimiter, authMiddleware, requireRole("CAREGIVER"), microlearningPatientRouter);
+app.use("/api/microlearning", apiLimiter, authMiddleware, requireRole("CAREGIVER"), microlearningMaterialRouter);
 
 // 404 handler for unmatched API routes
 app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiUsers, FiActivity, FiCheckCircle, FiArrowRight } from "react-icons/fi";
+import { FiUsers, FiActivity, FiCheckCircle, FiArrowRight, FiBookOpen } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
 import * as patientApi from "../../api/patientApi";
@@ -57,6 +57,16 @@ export default function Dashboard() {
         </Link>
         <Link to="/patients/new" className={`${styles.cta} ${styles.ctaSecondary}`}>
           Start new patient
+          <FiArrowRight size={16} />
+        </Link>
+        <Link to="/learning-guides" className={`${styles.cta} ${styles.ctaSecondary}`}>
+          <FiBookOpen size={17} />
+          Browse organization guides
+          <FiArrowRight size={16} />
+        </Link>
+        <Link to="/microlearning" className={`${styles.cta} ${styles.ctaSecondary}`}>
+          <FiActivity size={17} />
+          Patient Microlearning
           <FiArrowRight size={16} />
         </Link>
       </div>

@@ -7,13 +7,24 @@ const { ConflictError, UnauthorizedError, NotFoundError } = require("../../error
 const BCRYPT_COST_FACTOR = 12;
 
 function signToken(user) {
-  return jwt.sign({ userId: user.id, email: user.email }, env.jwtSecret, {
+  return jwt.sign({
+    userId: user.id,
+    email: user.email,
+    role: user.role || "CAREGIVER",
+    organizationId: user.organizationId || null,
+  }, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn,
   });
 }
 
 function toPublicUser(user) {
-  return { id: user.id, fullName: user.fullName, email: user.email };
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role || "CAREGIVER",
+    organization: user.organization ? { id: user.organization.id, name: user.organization.name } : null,
+  };
 }
 
 async function register({ fullName, email, password }) {
@@ -24,7 +35,7 @@ async function register({ fullName, email, password }) {
 
   const hashedPassword = await bcrypt.hash(password, BCRYPT_COST_FACTOR);
   const user = await prisma.user.create({
-    data: { fullName, email, password: hashedPassword },
+    data: { fullName, email, password: hashedPassword, role: "CAREGIVER" },
   });
 
   const token = signToken(user);
@@ -33,7 +44,7 @@ async function register({ fullName, email, password }) {
 }
 
 async function login({ email, password }) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, include: { organization: true } });
   if (!user) throw new UnauthorizedError("Invalid email or password");
 
   const matches = await bcrypt.compare(password, user.password);
@@ -48,7 +59,7 @@ async function login({ email, password }) {
  * userId from the verified JWT payload (req.user.id set by authMiddleware).
  */
 async function getMe(userId) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { organization: true } });
   if (!user) throw new NotFoundError("User not found");
   return toPublicUser(user);
 }

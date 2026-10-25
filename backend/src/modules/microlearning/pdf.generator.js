@@ -136,6 +136,20 @@ function generateMaterialPDF(material, patient) {
          .text(`Review: ${contentData.reviewNote}`, { width: CONTENT_WIDTH });
     }
 
+    if (Array.isArray(contentData.sourcesUsed) && contentData.sourcesUsed.length > 0) {
+      doc.moveDown(0.8);
+      sectionHeader(doc, "Organization-Approved Sources Used", BRAND_COLOR);
+      contentData.sourcesUsed.forEach((source) => {
+        doc.fillColor(BRAND_COLOR)
+           .fontSize(9)
+           .font("Helvetica")
+           .text(`${source.name}: ${source.url}`, { width: CONTENT_WIDTH, link: source.url, underline: true });
+        doc.moveDown(0.2);
+      });
+      doc.fillColor(MUTED_COLOR).fontSize(8).font("Helvetica-Oblique")
+         .text("Review source material with a clinician when making care decisions.", { width: CONTENT_WIDTH });
+    }
+
     // ── Footer on all pages ──────────────────────────────────────────
     const pageCount = doc.bufferedPageRange().count;
     for (let i = 0; i < pageCount; i++) {

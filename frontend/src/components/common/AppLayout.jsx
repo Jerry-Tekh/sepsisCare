@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { RiHeartPulseLine, RiMenuLine, RiCloseLine, RiLogoutBoxRLine } from "react-icons/ri";
-import { FiUsers, FiGrid } from "react-icons/fi";
+import { FiUsers, FiGrid, FiBookOpen, FiActivity } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext.jsx";
 import styles from "./AppLayout.module.css";
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
+  const isOrganizationAdmin = user?.role === "ORGANIZATION_ADMIN";
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,14 +51,23 @@ export default function AppLayout({ children }) {
               <FiGrid size={16} />
               Dashboard
             </Link>
-            <Link
-              to="/patients"
-              className={`${styles.navLink} ${isActive("/patients")}`}
-              onClick={() => setMenuOpen(false)}
-            >
-              <FiUsers size={16} />
-              Patients
-            </Link>
+            {isOrganizationAdmin ? (
+              <Link to="/organization/dashboard" className={`${styles.navLink} ${isActive("/organization")}`} onClick={() => setMenuOpen(false)}>
+                <FiBookOpen size={16} /> Guide management
+              </Link>
+            ) : (
+              <>
+                <Link to="/patients" className={`${styles.navLink} ${isActive("/patients")}`} onClick={() => setMenuOpen(false)}>
+                  <FiUsers size={16} /> Patients
+                </Link>
+                <Link to="/learning-guides" className={`${styles.navLink} ${isActive("/learning-guides")}`} onClick={() => setMenuOpen(false)}>
+                  <FiBookOpen size={16} /> Learning guides
+                </Link>
+                <Link to="/microlearning" className={`${styles.navLink} ${isActive("/microlearning")}`} onClick={() => setMenuOpen(false)}>
+                  <FiActivity size={16} /> Microlearning
+                </Link>
+              </>
+            )}
           </nav>
 
           <div className={styles.userArea}>
