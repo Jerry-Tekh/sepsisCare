@@ -179,6 +179,15 @@ export default function MaterialDetail({ material, onToggleAssign, assigning }) 
             {content.reviewNote && (
               <p className={styles.reviewNote}>📋 {content.reviewNote}</p>
             )}
+            {content.sourcesUsed?.length > 0 && (
+              <div className={styles.sourcesBox}>
+                <h3>Organization-approved sources used</h3>
+                {content.sourcesUsed.map((source) => (
+                  <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.name}</a>
+                ))}
+                <p>Review the source with a clinician when making care decisions.</p>
+              </div>
+            )}
           </div>
         )}
 

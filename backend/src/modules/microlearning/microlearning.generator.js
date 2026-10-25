@@ -89,7 +89,7 @@ function buildMaterialPlan(riskData) {
  * Generates all materials for a plan item using Gemini.
  * Returns the structured contentData object.
  */
-async function generateOneMaterial({ patient, riskData, planItem }) {
+async function generateOneMaterial({ patient, riskData, planItem, sources = [] }) {
   return geminiService.generateMicrolearningContent({
     patient,
     riskProfile: riskData,
@@ -97,6 +97,7 @@ async function generateOneMaterial({ patient, riskData, planItem }) {
     preventionTrack: planItem.preventionTrack,
     targetAudience: "BOTH",
     triggerContext: planItem.triggerContext,
+    sources,
   });
 }
 

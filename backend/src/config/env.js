@@ -46,6 +46,11 @@ module.exports = {
   jwtExpiresIn,
   geminiApiKey:  process.env.GEMINI_API_KEY,
   geminiModel:   process.env.GEMINI_MODEL || "gemini-2.5-pro",
+  objectStorageBucket: process.env.OBJECT_STORAGE_BUCKET || "",
+  objectStorageRegion: process.env.OBJECT_STORAGE_REGION || "auto",
+  objectStorageEndpoint: process.env.OBJECT_STORAGE_ENDPOINT || "",
+  objectStorageAccessKeyId: process.env.OBJECT_STORAGE_ACCESS_KEY_ID || "",
+  objectStorageSecretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY || "",
   corsOrigin:    process.env.CORS_ORIGIN || "http://localhost:5173",
 
   // Cookie configuration.

@@ -2,7 +2,7 @@
 
 AI-Powered Caregiver Support System for Early Risk Detection and Sepsis Prevention — Final Year Project MVP.
 
-This system helps caregivers and community health workers uncover hidden patient risks (infection, sepsis, pressure injury, environmental, caregiver burden) through a conversational, clinically-controlled onboarding flow. **It does not diagnose disease and does not replace clinicians.**
+This system helps caregivers and community health workers uncover hidden patient risks (infection, sepsis, pressure injury, environmental, caregiver burden) through a conversational, clinically-controlled onboarding flow. It also provides a shared library of organization-published learning guides and verified web sources. **It does not diagnose disease and does not replace clinicians.**
 
 ---
 
@@ -98,8 +98,26 @@ CORS is configured with `credentials: true` and an explicit allowed origin. All 
 1. Register a caregiver account → log in.
 2. Create Patient A → start onboarding → answer AI-generated questions.
 3. Onboarding completes when all activated clinical pathways are satisfied → Risk Profile generated automatically.
-4. Create Patient B → fully separate conversation, pathways, and risk profile.
-5. View risk profiles and conversation history from each patient's page; see aggregate stats on the dashboard.
+4. Caregivers can browse published organization learning guides; patient-specific Microlearning remains a separate feature.
+5. Create Patient B → fully separate conversation, pathways, and risk profile. View risk profiles and conversation history from each patient's page; see aggregate stats on the dashboard.
+
+### Roles and organization learning guides
+
+Registration creates a `CAREGIVER` account by default. Both roles use the same login route; after login, the app routes each user to the dashboard allowed by their signed-in role. Only an `ORGANIZATION_ADMIN` can manage that organization's shared guides and web sources. Caregivers can search and read published guides, while patient-specific Microlearning remains separate and continues to generate patient-specific content and PDFs.
+
+To provision the first organization admin, first apply database migrations and configure persistent S3-compatible storage (AWS S3 or a compatible provider) using `OBJECT_STORAGE_BUCKET`, `OBJECT_STORAGE_REGION`, `OBJECT_STORAGE_ACCESS_KEY_ID`, and `OBJECT_STORAGE_SECRET_ACCESS_KEY`. For a compatible service, also set `OBJECT_STORAGE_ENDPOINT`. Then run from `backend/` with these values set in the shell or deployment environment:
+
+```bash
+ORG_NAME="Example Health Organization" \
+ORG_ADMIN_NAME="Organization Admin" \
+ORG_ADMIN_EMAIL="admin@example.org" \
+ORG_ADMIN_PASSWORD="use-a-unique-password" \
+npm run admin:create
+```
+
+The command creates the organization and admin, or promotes and updates the account with the supplied email. Use a unique initial password and have the admin change it after signing in. The admin dashboard can upload PDF guides (up to 15 MB), add free-text vectors/details/tags, and associate HTTPS sources. Newly added sources are pending until approved. Only published guides and approved associated sources appear to caregivers or are eligible as context for Microlearning. Private uploaded PDFs are stored in the configured bucket and served through short-lived signed links; keep bucket access private and enable encryption at rest in the storage provider.
+
+Apply the new migration with `npx prisma migrate deploy` in production or `npx prisma migrate dev` locally. Existing accounts receive the caregiver role by default. If promoting an existing account, have it sign in again so its session receives the updated role.
 
 ---
 
@@ -149,6 +167,10 @@ Deploy `frontend/dist/` to any static host (Vercel, Netlify, Cloudflare Pages, S
 | `JWT_EXPIRES_IN` | Optional | Token lifetime. Default: `2h`. Accepts `30m`, `8h`, `7d`, etc. Cookie `Max-Age` is derived automatically. |
 | `GEMINI_MODEL` | Optional | Default: `gemini-2.5-pro`. Check `ai.google.dev/gemini-api/docs/models` for current model availability. |
 | `PORT` | Optional | Default: `5000`. Most platforms inject this automatically. |
+| `OBJECT_STORAGE_BUCKET` | Required for guide PDFs | Private bucket name for uploaded PDFs. |
+| `OBJECT_STORAGE_REGION` | Optional | Storage region; defaults to `auto` for S3-compatible services. |
+| `OBJECT_STORAGE_ENDPOINT` | Optional | S3-compatible service endpoint, such as an account-specific endpoint. |
+| `OBJECT_STORAGE_ACCESS_KEY_ID` / `OBJECT_STORAGE_SECRET_ACCESS_KEY` | Required for uploads | Private credentials scoped to the guide bucket. |
 
 ### Frontend (set before `npm run build`)
 

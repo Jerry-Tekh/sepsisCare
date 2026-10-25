@@ -12,9 +12,12 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "admin:create": "node prisma/createOrganizationAdmin.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@aws-sdk/s3-request-presigner": "^3.1156.0",
     "@google/genai": "^2.26.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
@@ -28,6 +31,7 @@
     "helmet": "8.2.0",
     "jsonwebtoken": "9.0.3",
     "morgan": "1.11.0",
+    "multer": "^2.5.0",
     "pdfkit": "0.20.2",
     "pg": "^8.23.1",
     "prisma": "^7.10.0",

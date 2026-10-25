@@ -8,7 +8,7 @@ const { UnauthorizedError } = require("../errors/AppError");
  * the cookie transport is accepted, which means JavaScript on the client
  * cannot read or steal the token.
  *
- * On success, attaches { id, email } to req.user.
+ * On success, attaches the signed role and organization context to req.user.
  * On failure (missing/invalid/expired cookie), throws 401.
  */
 function authMiddleware(req, res, next) {
@@ -20,7 +20,12 @@ function authMiddleware(req, res, next) {
 
   try {
     const payload = jwt.verify(token, env.jwtSecret);
-    req.user = { id: payload.userId, email: payload.email };
+    req.user = {
+      id: payload.userId,
+      email: payload.email,
+      role: payload.role || "CAREGIVER",
+      organizationId: payload.organizationId || null,
+    };
     next();
   } catch {
     return next(new UnauthorizedError("Session expired or invalid — please log in again"));
