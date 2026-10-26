@@ -31,8 +31,10 @@ async function pdfUrl(req, res, next) {
   try {
     const { guideId } = guideIdSchema.parse(req.params);
     const download = req.query.download === "true";
-    const { url } = await service.getDownloadUrl(guideId, download);
-    res.redirect(302, url);
+    // Return the short-lived URL through the authenticated API request. The
+    // frontend can then open the storage URL without requiring the browser to
+    // send the API's httpOnly session cookie during a direct navigation.
+    res.status(200).json(await service.getDownloadUrl(guideId, download));
   } catch (err) { next(err); }
 }
 

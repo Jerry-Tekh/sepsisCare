@@ -8,8 +8,8 @@ export function getGuideOptions() {
   return axiosClient.get("/library/guides/options");
 }
 
-const apiRoot = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/+$/, "");
-
-export function pdfUrl(guideId, download = false) {
-  return `${apiRoot}/library/guides/${encodeURIComponent(guideId)}/pdf${download ? "?download=true" : ""}`;
+export function getPdfUrl(guideId, download = false) {
+  return axiosClient.get(`/library/guides/${encodeURIComponent(guideId)}/pdf`, {
+    params: download ? { download: "true" } : {},
+  });
 }

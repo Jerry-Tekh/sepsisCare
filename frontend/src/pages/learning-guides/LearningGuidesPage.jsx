@@ -17,6 +17,7 @@ export default function LearningGuidesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pdfError, setPdfError] = useState("");
 
   useEffect(() => {
     guidesApi.getGuideOptions().then(({ data }) => setOptions(data)).catch(() => {});
@@ -51,6 +52,40 @@ export default function LearningGuidesPage() {
     setPage(1);
   }
 
+  async function openGuidePdf(guideId) {
+    // Open a tab synchronously from the click handler so Firefox does not
+    // treat the later navigation (after the authenticated API call) as a popup.
+    const pdfWindow = window.open("about:blank", "_blank");
+    if (!pdfWindow) {
+      setPdfError("Allow pop-ups for this site, then try opening the PDF again.");
+      return;
+    }
+    pdfWindow.opener = null;
+    setPdfError("");
+    try {
+      const { data } = await guidesApi.getPdfUrl(guideId);
+      pdfWindow.location.href = data.url;
+    } catch {
+      pdfWindow.close();
+      setPdfError("Could not open this PDF. Please try again.");
+    }
+  }
+
+  async function downloadGuidePdf(guideId) {
+    setPdfError("");
+    try {
+      const { data } = await guidesApi.getPdfUrl(guideId, true);
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.rel = "noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      setPdfError("Could not download this PDF. Please try again.");
+    }
+  }
+
   return (
     <AppLayout>
       <header className={styles.header}>
@@ -75,6 +110,7 @@ export default function LearningGuidesPage() {
 
       <div className={styles.resultsHeader}><h2>Available guides</h2><span>{total} guide{total === 1 ? "" : "s"}</span></div>
       {error && <p className={styles.error} role="alert">{error}</p>}
+      {pdfError && <p className={styles.error} role="alert">{pdfError}</p>}
       {loading ? <div className={styles.loading}><Spinner size="lg" /></div> : guides.length === 0 ? (
         <div className={styles.empty}><FiBookOpen size={34} /><h3>No guides found</h3><p>Try another search or filter combination.</p></div>
       ) : (
@@ -87,7 +123,7 @@ export default function LearningGuidesPage() {
               <p className={styles.organization}>Shared by {guide.organization?.name || "Healthcare organization"}</p>
               {guide.tags?.length > 0 && <div className={styles.tags}>{guide.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
               {guide.sources?.length > 0 && <div className={styles.sourceList}><strong>Verified sources</strong>{guide.sources.map((source) => <a key={source.id} href={source.url} target="_blank" rel="noreferrer"><FiExternalLink size={13} /> {source.name}</a>)}</div>}
-              <div className={styles.cardActions}><a className={styles.primaryButton} href={guidesApi.pdfUrl(guide.id)} target="_blank" rel="noreferrer"><FiBookOpen size={15} /> Open PDF</a><a className={styles.secondaryButton} href={guidesApi.pdfUrl(guide.id, true)}><FiDownload size={15} /> Download</a></div>
+              <div className={styles.cardActions}><button className={styles.primaryButton} type="button" onClick={() => openGuidePdf(guide.id)}><FiBookOpen size={15} /> Open PDF</button><button className={styles.secondaryButton} type="button" onClick={() => downloadGuidePdf(guide.id)}><FiDownload size={15} /> Download</button></div>
             </article>
           ))}
         </div>
