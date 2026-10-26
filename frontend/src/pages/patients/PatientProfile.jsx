@@ -101,6 +101,7 @@ export default function PatientProfile() {
   if (!patient) return null;
 
   const riskData = riskProfile?.riskData;
+  const hasCompletedOnboarding = sessions.some((session) => session.status === "COMPLETED") && Boolean(riskProfile);
 
   return (
     <AppLayout>
@@ -204,7 +205,10 @@ export default function PatientProfile() {
         <div className={styles.featureRow}>
           <div className={styles.featureInfo}>
             <p className={styles.featureDesc}>
-              Ask the AI any question about safe care for {patient?.fullName}. The AI knows their full risk profile and will alert you immediately if it detects a red flag.
+              {hasCompletedOnboarding
+                ? `Ask the AI any question about safe care for ${patient?.fullName}.`
+                : "Complete onboarding and the risk assessment before starting a Safety Query for this patient."}
+              {hasCompletedOnboarding && " The AI will alert you if it detects a red flag."}
             </p>
             {safetyQueries.length > 0 && (
               <p className={styles.featureMeta}>
@@ -219,9 +223,20 @@ export default function PatientProfile() {
           </div>
           <Button
             icon={<FiHelpCircle size={15} />}
-            onClick={() => navigate(`/patients/${id}/safety-query`)}
+            onClick={() => {
+              if (hasCompletedOnboarding) {
+                navigate(`/patients/${id}/safety-query`);
+              } else if (activeSession) {
+                navigate(`/patients/${id}/onboarding`, { state: { sessionId: activeSession.id } });
+              } else {
+                handleStartOnboarding();
+              }
+            }}
+            disabled={!hasCompletedOnboarding && starting}
           >
-            {safetyQueries.length > 0 ? "Open safety chat" : "Start asking"}
+            {hasCompletedOnboarding
+              ? (safetyQueries.length > 0 ? "Open safety chat" : "Start asking")
+              : activeSession ? "Continue onboarding" : starting ? "Starting onboarding…" : "Start onboarding"}
           </Button>
         </div>
       </Card>

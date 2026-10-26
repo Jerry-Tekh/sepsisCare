@@ -33,6 +33,7 @@ async function sendMessage(req, res, next) {
 async function listQueries(req, res, next) {
   try {
     await patientService.assertOwnership(req.params.patientId, req.user.id);
+    await safetyQueryService.assertOnboardingCompleted(req.params.patientId);
     const queries = await safetyQueryService.listQueriesForPatient(req.params.patientId);
     res.status(200).json({ queries });
   } catch (err) {
@@ -44,6 +45,7 @@ async function getQuery(req, res, next) {
   try {
     const query = await safetyQueryService.getQuery(req.params.queryId);
     await patientService.assertOwnership(query.patientId, req.user.id);
+    await safetyQueryService.assertOnboardingCompleted(query.patientId);
     res.status(200).json({ query });
   } catch (err) {
     next(err);
@@ -54,6 +56,7 @@ async function closeQuery(req, res, next) {
   try {
     const query = await safetyQueryService.getQuery(req.params.queryId);
     await patientService.assertOwnership(query.patientId, req.user.id);
+    await safetyQueryService.assertOnboardingCompleted(query.patientId);
     const updated = await safetyQueryService.closeQuery(req.params.queryId);
     res.status(200).json({ query: updated });
   } catch (err) {

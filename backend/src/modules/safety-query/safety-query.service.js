@@ -2,11 +2,32 @@ const prisma = require("../../config/prismaClient");
 const geminiService = require("../discovery/gemini/gemini.service");
 const { NotFoundError, BadRequestError } = require("../../errors/AppError");
 
+async function assertOnboardingCompleted(patientId) {
+  const [completedSession, riskProfile] = await Promise.all([
+    prisma.onboardingSession.findFirst({
+      where: { patientId, status: "COMPLETED" },
+      select: { id: true },
+    }),
+    prisma.riskProfile.findFirst({
+      where: { patientId },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!completedSession || !riskProfile) {
+    throw new BadRequestError(
+      "Complete onboarding and wait for the patient risk assessment before using Safety Query."
+    );
+  }
+}
+
 /**
  * Starts a new safety query session for a patient.
  * The first CHW question is stored immediately and the AI answers it.
  */
 async function startQuery(patientId, caregiverId, firstQuestion) {
+  await assertOnboardingCompleted(patientId);
+
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
     include: {
@@ -86,6 +107,8 @@ async function startQuery(patientId, caregiverId, firstQuestion) {
  * Builds the full conversation history so the AI has context.
  */
 async function sendMessage(queryId, messageText, patientId) {
+  await assertOnboardingCompleted(patientId);
+
   const query = await prisma.safetyQuery.findUnique({
     where: { id: queryId },
     include: {
@@ -198,4 +221,11 @@ async function closeQuery(queryId) {
   });
 }
 
-module.exports = { startQuery, sendMessage, listQueriesForPatient, getQuery, closeQuery };
+module.exports = {
+  assertOnboardingCompleted,
+  startQuery,
+  sendMessage,
+  listQueriesForPatient,
+  getQuery,
+  closeQuery,
+};
