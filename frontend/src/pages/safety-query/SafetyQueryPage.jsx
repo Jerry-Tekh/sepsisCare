@@ -11,6 +11,8 @@ import Spinner from "../../components/common/Spinner.jsx";
 import ReferralAlert from "../../components/safety-query/ReferralAlert.jsx";
 import * as safetyQueryApi from "../../api/safetyQueryApi";
 import * as patientApi from "../../api/patientApi";
+import * as discoveryApi from "../../api/discoveryApi";
+import * as riskApi from "../../api/riskApi";
 import styles from "./SafetyQueryPage.module.css";
 
 function formatDate(iso) {
@@ -32,6 +34,8 @@ export default function SafetyQueryPage() {
   const [redFlag, setRedFlag]               = useState(null); // { referralReason }
   const [startingNew, setStartingNew]       = useState(false);
   const [newQuestion, setNewQuestion]       = useState("");
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [activeOnboardingSession, setActiveOnboardingSession] = useState(null);
 
   const scrollRef  = useRef(null);
   const inputRef   = useRef(null);
@@ -49,12 +53,30 @@ export default function SafetyQueryPage() {
     async function load() {
       setLoading(true);
       try {
-        const [patRes, queryRes] = await Promise.all([
+        const [patRes, onboardingRes] = await Promise.all([
           patientApi.getPatient(patientId),
-          safetyQueryApi.listQueries(patientId),
+          discoveryApi.listOnboardingSessions(patientId),
         ]);
         if (cancelled) return;
         setPatient(patRes.data.patient);
+        const onboardingSessions = onboardingRes.data.sessions;
+        const completedSession = onboardingSessions.some((session) => session.status === "COMPLETED");
+        let hasRiskProfile = false;
+        try {
+          await riskApi.getLatestRiskProfile(patientId);
+          hasRiskProfile = true;
+        } catch { /* no risk profile until onboarding completes */ }
+        const onboardingReady = completedSession && hasRiskProfile;
+        setHasCompletedOnboarding(onboardingReady);
+        setActiveOnboardingSession(onboardingSessions.find((session) => session.status === "IN_PROGRESS") || null);
+
+        if (!onboardingReady) {
+          setQueries([]);
+          return;
+        }
+
+        const queryRes = await safetyQueryApi.listQueries(patientId);
+        if (cancelled) return;
         setQueries(queryRes.data.queries);
         // Open the most recent OPEN query automatically
         const openQuery = queryRes.data.queries.find(
@@ -146,6 +168,14 @@ export default function SafetyQueryPage() {
     navigate(`/patients/${patientId}/microlearning?highlight=${materialId}`);
   }
 
+  function continueOnboarding() {
+    if (activeOnboardingSession) {
+      navigate(`/patients/${patientId}/onboarding`, { state: { sessionId: activeOnboardingSession.id } });
+    } else {
+      navigate(`/patients/${patientId}`);
+    }
+  }
+
   if (loading) return <AppLayout><div className={styles.center}><Spinner size="lg" /></div></AppLayout>;
 
   const isBlocked = activeQuery?.status === "RED_FLAG_TRIGGERED" || activeQuery?.status === "CLOSED" || isTyping || sending;
@@ -168,11 +198,24 @@ export default function SafetyQueryPage() {
         </button>
         <h1>Safety Query</h1>
         <p className={styles.subtitle}>
-          Ask any question about safe care for <strong>{patient?.fullName}</strong>. The AI has access to their full risk profile.
+          {hasCompletedOnboarding
+            ? <>Ask any question about safe care for <strong>{patient?.fullName}</strong>. The AI uses their completed risk assessment.</>
+            : <>Complete onboarding and the risk assessment for <strong>{patient?.fullName}</strong> before using Safety Query.</>}
         </p>
       </div>
 
       {error && <div className={styles.errorBox}>{error}</div>}
+
+      {!hasCompletedOnboarding ? (
+        <div className={styles.emptyChat}>
+          <RiRobot2Line size={48} className={styles.emptyChatIcon} />
+          <h2>Onboarding required</h2>
+          <p>Complete onboarding and the risk assessment for {patient?.fullName} before starting a Safety Query.</p>
+          <button className={styles.submitBtn} onClick={continueOnboarding}>
+            <RiAddLine size={16} /> {activeOnboardingSession ? "Continue onboarding" : "Go to patient profile"}
+          </button>
+        </div>
+      ) : (
 
       <div className={styles.layout}>
         {/* ── Left panel: session history ──────────────────────── */}
@@ -353,6 +396,7 @@ export default function SafetyQueryPage() {
           )}
         </section>
       </div>
+      )}
     </AppLayout>
   );
 }
