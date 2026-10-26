@@ -33,7 +33,6 @@ async function sendMessage(req, res, next) {
 async function listQueries(req, res, next) {
   try {
     await patientService.assertOwnership(req.params.patientId, req.user.id);
-    await safetyQueryService.assertOnboardingCompleted(req.params.patientId);
     const queries = await safetyQueryService.listQueriesForPatient(req.params.patientId);
     res.status(200).json({ queries });
   } catch (err) {
