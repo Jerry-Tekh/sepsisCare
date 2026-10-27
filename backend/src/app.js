@@ -16,6 +16,7 @@ const discoveryRoutes = require("./modules/discovery/discovery.routes");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 const learningGuideRoutes = require("./modules/learning-guides/learning-guides.routes");
 const organizationGuideRoutes = require("./modules/organization-guides/organization-guides.routes");
+const careWorkspaceRoutes = require("./modules/care-workspace/care-workspace.routes");
 
 const {
   patientRouter: safetyQueryPatientRouter,
@@ -52,6 +53,7 @@ app.use("/api/organization", apiLimiter, authMiddleware, requireRole("ORGANIZATI
 
 // Safety Query — patient-scoped (start / list) + session-scoped (message / close)
 app.use("/api/patients/:patientId/safety-query", apiLimiter, authMiddleware, requireRole("CAREGIVER"), safetyQueryPatientRouter);
+app.use("/api/patients/:patientId/care-workspace", apiLimiter, authMiddleware, requireRole("CAREGIVER"), careWorkspaceRoutes);
 app.use("/api/safety-query", apiLimiter, authMiddleware, requireRole("CAREGIVER"), safetyQuerySessionRouter);
 
 // Microlearning — patient-scoped (list / generate) + material-scoped (view / assign / download)

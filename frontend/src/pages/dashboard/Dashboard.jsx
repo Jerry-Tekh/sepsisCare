@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiUsers, FiActivity, FiCheckCircle, FiArrowRight, FiBookOpen, FiUserPlus,
-  FiAlertTriangle, FiAlertOctagon,
+  FiAlertTriangle, FiAlertOctagon, FiMessageCircle, FiClipboard,
 } from "react-icons/fi";
 import { RiFirstAidKitLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -33,17 +33,12 @@ const RISK_ROWS = [
 ];
 
 const QUICK_LINKS = [
+  { to: "/patients",        label: "Open a Safety Query", icon: FiMessageCircle },
+  { to: "/patients",        label: "Create a caregiver care plan", icon: FiClipboard },
   { to: "/patients/new",    label: "Add a patient",      icon: FiUserPlus },
   { to: "/learning-guides", label: "Learning guides",    icon: FiBookOpen },
   { to: "/microlearning",   label: "Microlearning",      icon: FiActivity },
 ];
-
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 function formatDate(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—";
@@ -53,6 +48,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [summaryError, setSummaryError] = useState("");
+  const [agentGreeting, setAgentGreeting] = useState("");
   const { patients, loading, error } = usePatientsWithRisk();
 
   useEffect(() => {
@@ -60,6 +56,7 @@ export default function Dashboard() {
       .getDashboardSummary()
       .then(({ data }) => setSummary(data))
       .catch(() => setSummaryError("Could not load dashboard summary."));
+    patientApi.getDashboardWelcome().then(({ data }) => setAgentGreeting(data.greeting || "")).catch(() => {});
   }, []);
 
   const firstName = user?.fullName?.trim().split(/\s+/)[0] || "";
@@ -79,7 +76,7 @@ export default function Dashboard() {
   return (
     <AppLayout title="Dashboard">
       <PageHeader
-        title={`${greeting()}${firstName ? `, ${firstName}` : ""}`}
+        title={agentGreeting || `Hi, ${firstName || "there"}. What would you like to achieve today?`}
         subtitle="Here's how the patients in your care are doing."
         actions={<Button to="/patients/new" icon={<FiUserPlus size={15} />}>Add patient</Button>}
       />

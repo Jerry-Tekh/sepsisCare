@@ -1,55 +1,47 @@
 # Backend — Caregiver Sepsis Prevention Platform
 
-Express + Prisma + PostgreSQL API implementing the Hybrid Clinical Discovery Engine.
+The backend is an Express + Prisma + PostgreSQL API. Conversational decisions are made by the private Render agent in `agent/`, which reads the skill corpus in `skills/` and calls OpenRouter. The browser only calls this API; it never receives either the OpenRouter key or the shared agent secret.
 
-## Setup
+## Local setup
 
 ```bash
-cp .env.example .env   # fill in DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
+cp .env.example .env
+# Configure DATABASE_URL, JWT_SECRET, AGENT_BASE_URL, and AGENT_SHARED_SECRET.
 npm install
-npx prisma migrate dev --name init
-npx prisma db seed
+npx prisma migrate dev
 npm run dev
 ```
 
-Server starts on `http://localhost:5000`. Health check: `GET /health`.
+Run the agent in a second terminal:
 
-For production deployment steps and the full environment variable reference, see the root `README.md`.
+```bash
+cd agent
+cp .env.example .env
+npm install
+npm start
+```
 
-## Architecture Notes
+Set the same `AGENT_SHARED_SECRET` for the backend and agent. Add `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` only to the agent environment. Select a model with a context window large enough for the applicable skills, patient history, and response. Microlearning source retrieval also requires model tool-calling support. Health endpoints are `GET /health` on each service.
 
-- `src/modules/*` — one folder per feature (auth, patient, discovery, risk, dashboard), each with routes → controller → service.
-- `src/modules/discovery/rulesEngine/` — the deterministic Clinical Rules Engine (Layer 1). Pure functions, no I/O. `pathways.config.js` is the single source of truth for pathway objectives; `activationRules.js` is the extendable activation rule list.
-- `src/modules/discovery/gemini/` — the Gemini Conversation Engine (Layer 2). Sole owner of the Gemini SDK; it phrases questions and interprets answers only for the pathway/objective dictated by the rules engine. Gemini structured JSON output is validated with Zod before use.
-- `src/modules/risk/` — the Risk Assessment Engine (Layer 3). Risk *levels* are computed deterministically from rule thresholds in `risk.service.js`; Gemini is only used to write the narrative `summary` text.
-- `src/middleware/` — auth (JWT), Zod validation, rate limiting, centralized error handling, request logging.
-- `src/errors/AppError.js` — typed errors with HTTP status codes, thrown from services and caught centrally.
+## Agent architecture
 
-## Production Hardening
+- `agent/server.js` hosts the Render agent endpoint and loads the skill corpus from `../skills`.
+- Identity and boundary files are always included. Each mode selects its applicable workflows and examples; onboarding and care planning receive the full prognosis-vector set, with additional vectors added when the conversation calls for them. Across the modes, every workflow in the skills corpus has a route into the agent context.
+- `src/services/agentClient.service.js` calls the agent over the private shared-secret connection and validates its structured response.
+- `src/modules/discovery/` stores adaptive onboarding conversations and screening facts extracted by the agent. The agent selects the next question and completion point; the backend controls access, persistence, and deterministic risk calculations.
+- `src/modules/care-workspace/` stores agent memory, care-plan revisions, caregiver check-ins, and flags for clinician review.
+- Safety Query and microlearning generation also use the skills agent. Risk levels remain deterministic; missing screening facts are shown as `unknown` rather than silently treated as low.
 
-- `helmet` — standard security response headers.
-- `compression` — gzip response compression.
-- `express-rate-limit` — 300 req/15min on general API routes, 20 req/15min on `/api/auth/*` specifically.
-- `app.set('trust proxy', 1)` — correct client IP detection behind a reverse proxy/load balancer.
-- Graceful shutdown + `unhandledRejection`/`uncaughtException` handlers in `server.js`.
+## Render deployment
 
-## Re-onboarding behavior
+Deploy the existing API from the `backend` directory as before, with database and authentication configuration. Apply migrations with `npx prisma migrate deploy`.
 
-Starting a new onboarding session for a patient who already completed a previous round clears that patient's `PatientPathway` progress (but not their conversation history or past risk profiles) so the new session asks every question fresh, rather than silently treating stale answers from the prior round as still valid.
+Create a second Web Service from the same repository for the agent. Leave Render's **Root Directory** blank so the service can access the skill folder. Use:
 
-## Adding a new clinical pathway
+- Build: `npm install --prefix backend/agent`
+- Start: `npm start --prefix backend/agent`
+- Health check: `/health`
 
-1. Add an entry to `pathways.config.js` with `description` and `objectives`.
-2. Add any activation rule(s) to `activationRules.js` that should trigger it.
-3. Add fallback questions for its objectives in `gemini.service.js`'s `FALLBACK_QUESTIONS` map (used only if Gemini is unreachable).
-4. Re-run `npx prisma db seed` to register it in the `ClinicalPathway` table.
+Agent environment variables: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `AGENT_SHARED_SECRET`. Backend environment variables: `AGENT_BASE_URL` and the identical `AGENT_SHARED_SECRET`. Keep the OpenRouter key on the agent service only.
 
-No other code changes are required — the engine is fully data-driven.
-
-## Risk Scoring Thresholds (flagged for clinical review)
-
-The thresholds in `risk.service.js` (e.g. "2+ sepsis red flags = high risk") are MVP defaults chosen for a Final Year Project demo, not a validated clinical instrument. Before any real-world deployment, these should be reviewed and adjusted with a clinical advisor.
-
-## Gemini Model
-
-Defaults to `gemini-2.5-pro`. Override with the `GEMINI_MODEL` environment variable. Check the [Gemini model list](https://ai.google.dev/gemini-api/docs/models) for availability. Structured JSON responses are validated by the app with Zod.
+See the repository README for the full deployment and frontend setup.

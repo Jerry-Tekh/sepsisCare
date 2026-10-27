@@ -3,7 +3,7 @@
  *
  * This is the single source of truth for what each pathway screens for.
  * Do NOT hardcode pathway objectives anywhere else in the codebase —
- * the rules engine, the Gemini service, and the seed script all read
+ * the risk coverage map and the seed script read
  * from this file (or its persisted copy in the ClinicalPathway table).
  *
  * Each pathway has:

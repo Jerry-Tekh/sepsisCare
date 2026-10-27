@@ -1,8 +1,8 @@
 const prisma = require("../../config/prismaClient");
-const geminiService = require("../discovery/gemini/gemini.service");
 const { riskProfileSchema } = require("./risk.schema");
 const { NotFoundError } = require("../../errors/AppError");
 const logger = require("../../utils/logger");
+const pathwaysConfig = require("../discovery/rulesEngine/pathways.config");
 
 // Lazy-require to avoid circular dependency (microlearning → risk → microlearning)
 function getMicrolearningService() {
@@ -22,6 +22,10 @@ function countTruthy(answers, keys) {
   return keys.filter((k) => answers[k] === true).length;
 }
 
+function hasAll(answers, keys) {
+  return keys.every((key) => answers[key] !== undefined && answers[key] !== null);
+}
+
 function computeSepsisRisk(answers) {
   const redFlagKeys = [
     "confusion",
@@ -33,7 +37,7 @@ function computeSepsisRisk(answers) {
   const count = countTruthy(answers, redFlagKeys);
   if (count >= 2) return "high";
   if (count === 1) return "moderate";
-  return "low";
+  return hasAll(answers, redFlagKeys) ? "low" : "unknown";
 }
 
 function computeInfectionRisk(answers) {
@@ -41,13 +45,13 @@ function computeInfectionRisk(answers) {
   const count = countTruthy(answers, infectionKeys);
   if (count >= 3) return "high";
   if (count >= 1) return "moderate";
-  return "low";
+  return hasAll(answers, infectionKeys) ? "low" : "unknown";
 }
 
 function computePressureInjuryRisk(answers) {
   if (answers.bedriddenStatus === true) return "high";
   if (answers.wheelchairUse === true || answers.mobilityLimitation === true) return "moderate";
-  return "low";
+  return hasAll(answers, ["bedriddenStatus", "wheelchairUse", "mobilityLimitation"]) ? "low" : "unknown";
 }
 
 function computeEnvironmentalRisk(answers) {
@@ -59,7 +63,7 @@ function computeEnvironmentalRisk(answers) {
   ].filter(Boolean).length;
   if (concerns >= 2) return "high";
   if (concerns === 1) return "moderate";
-  return "low";
+  return hasAll(answers, ["ventilation", "waterAccess", "hygieneConditions"]) ? "low" : "unknown";
 }
 
 function computeCaregiverBurden(answers) {
@@ -71,7 +75,7 @@ function computeCaregiverBurden(answers) {
 
   if ((hours !== null && hours >= 16) || (highExhaustion && noSupport)) return "high";
   if ((hours !== null && hours >= 8) || highExhaustion || noSupport) return "moderate";
-  return "low";
+  return hours !== null && typeof answers.exhaustionLevel === "string" && typeof answers.supportAvailability === "boolean" ? "low" : "unknown";
 }
 
 function computeKnownConditions(answers) {
@@ -138,8 +142,14 @@ async function generateAndSaveRiskProfile(patientId) {
   const patient = await prisma.patient.findUnique({ where: { id: patientId } });
   if (!patient) throw new NotFoundError("Patient not found");
 
-  const patientPathways = await prisma.patientPathway.findMany({ where: { patientId } });
-  const answers = flattenAnswers(patientPathways);
+  const [patientPathways, memoryRow] = await Promise.all([
+    prisma.patientPathway.findMany({ where: { patientId } }),
+    prisma.agentMemory.findUnique({ where: { patientId } }),
+  ]);
+  const memoryFacts = memoryRow?.data?.facts || {};
+  const screeningKeys = new Set(Object.values(pathwaysConfig).flatMap((config) => config.objectives));
+  const answers = { ...flattenAnswers(patientPathways) };
+  for (const [key, entry] of Object.entries(memoryFacts)) if (screeningKeys.has(key)) answers[key] = entry?.value ?? entry;
 
   const sepsisRisk = computeSepsisRisk(answers);
   const infectionRisk = computeInfectionRisk(answers);
@@ -160,11 +170,8 @@ async function generateAndSaveRiskProfile(patientId) {
     caregiver_burden: caregiverBurden,
   };
 
-  const summary = await geminiService.generateRiskSummary({
-    patient,
-    pathwayData: answers,
-    computedRisk,
-  });
+  const unknownFacts = ["confusion", "rapidBreathing", "extremeWeakness", "persistentFever", "alteredConsciousness", "fever", "chills", "worseningPain", "pus", "increasingRedness", "bedriddenStatus", "wheelchairUse", "mobilityLimitation", "ventilation", "waterAccess", "hygieneConditions", "careHoursPerDay", "exhaustionLevel", "supportAvailability"].filter((key) => answers[key] === undefined);
+  const summary = `Screening levels are calculated from the information recorded so far. “Unknown” means that information is missing, not that the risk is low. This is a screening aid, not a diagnosis. Review reported findings and any recommended referral with a clinician.`;
 
   const riskProfileData = riskProfileSchema.parse({
     known_conditions: computeKnownConditions(answers),
@@ -173,6 +180,7 @@ async function generateAndSaveRiskProfile(patientId) {
     referral_recommended: referral.recommended,
     referral_reason: referral.reason,
     summary,
+    assessment_coverage: { knownFacts: Object.keys(answers).length, unknownFacts },
   });
 
   const savedProfile = await prisma.riskProfile.create({

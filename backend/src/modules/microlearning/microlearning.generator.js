@@ -1,4 +1,4 @@
-const geminiService = require("../discovery/gemini/gemini.service");
+const agentClient = require("../../services/agentClient.service");
 
 /**
  * Maps risk profile levels to the topics that should be auto-generated.
@@ -86,19 +86,18 @@ function buildMaterialPlan(riskData) {
 }
 
 /**
- * Generates all materials for a plan item using Gemini.
+ * Generates all materials for a plan item using the Render-hosted skills agent.
  * Returns the structured contentData object.
  */
 async function generateOneMaterial({ patient, riskData, planItem, sources = [] }) {
-  return geminiService.generateMicrolearningContent({
-    patient,
-    riskProfile: riskData,
-    topic: planItem.topic,
-    preventionTrack: planItem.preventionTrack,
-    targetAudience: "BOTH",
-    triggerContext: planItem.triggerContext,
-    sources,
+  const result = await agentClient.runAgent({
+    mode: "microlearning",
+    message: `Create a caregiver microlearning material about ${planItem.topic}. ${planItem.triggerContext || ""}`,
+    patientContext: { patient: { fullName: patient.fullName, age: patient.age, gender: patient.gender }, riskProfile: riskData },
+    appContext: { preventionTrack: planItem.preventionTrack, targetAudience: "BOTH", approvedSources: sources, approvedSourceUrls: sources.map((source) => source.url) },
   });
+  if (!result.material) throw new Error("Agent did not return a structured microlearning material");
+  return result.material;
 }
 
 module.exports = { buildMaterialPlan, generateOneMaterial, determinePreventionTrack };

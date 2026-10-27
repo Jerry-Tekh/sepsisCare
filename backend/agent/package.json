@@ -1,0 +1,9 @@
+{
+  "name": "sepsisguard-render-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "express": "5.2.1" },
+  "engines": { "node": ">=20.0.0" }
+}

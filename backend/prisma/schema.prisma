@@ -139,6 +139,12 @@ model Patient {
   riskProfiles            RiskProfile[]
   safetyQueries           SafetyQuery[]
   microlearningMaterials  MicrolearningMaterial[]
+  agentMemory             AgentMemory?
+  agentMemoryRevisions    AgentMemoryRevision[]
+  carePlans               CarePlan[]
+  carePlanConversations   CarePlanConversation[]
+  carePlanCheckIns        CarePlanCheckIn[]
+  careFlags               CareFlag[]
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
@@ -295,4 +301,99 @@ model MicrolearningMaterial {
 
   @@index([patientId])
   @@map("microlearning_materials")
+}
+
+// Structured, durable patient-set memory used by the skill-led agent.
+model AgentMemory {
+  id        String   @id @default(uuid())
+  patientId String   @unique
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
+
+  @@map("agent_memory")
+}
+
+model AgentMemoryRevision {
+  id        String      @id @default(uuid())
+  patientId String
+  patient   Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime    @default(now())
+
+  @@index([patientId, createdAt])
+  @@map("agent_memory_revisions")
+}
+
+// Every revision is preserved; current plans never overwrite older ones.
+model CarePlan {
+  id        String   @id @default(uuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  version   Int
+  isCurrent Boolean  @default(true)
+  title     String
+  issue     String
+  planData  Json
+  createdAt DateTime @default(now())
+  checkIns  CarePlanCheckIn[]
+
+  @@unique([patientId, version])
+  @@index([patientId, isCurrent])
+  @@map("care_plans")
+}
+
+model CarePlanConversation {
+  id        String            @id @default(uuid())
+  patientId String
+  patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  status    String            @default("OPEN")
+  messages  CarePlanMessage[]
+  createdAt DateTime          @default(now())
+
+  @@index([patientId, createdAt])
+  @@map("care_plan_conversations")
+}
+
+model CarePlanMessage {
+  id             String               @id @default(uuid())
+  conversationId String
+  conversation   CarePlanConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  createdAt      DateTime             @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("care_plan_messages")
+}
+
+model CarePlanCheckIn {
+  id        String   @id @default(uuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      CarePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([patientId, createdAt])
+  @@map("care_plan_check_ins")
+}
+
+model CareFlag {
+  id           String   @id @default(uuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  title        String
+  status       String   @default("OPEN")
+  epistemic    String   @default("suspected")
+  evidence     Json
+  doctorAsk    String
+  prevention   Json
+  outcome      String?
+  createdAt    DateTime @default(now())
+  resolvedAt   DateTime?
+
+  @@index([patientId, status, createdAt])
+  @@map("care_flags")
 }
