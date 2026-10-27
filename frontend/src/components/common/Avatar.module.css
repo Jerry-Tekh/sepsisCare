@@ -1,0 +1,29 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.sm { width: 34px; height: 34px; font-size: 0.75rem; }
+.md { width: 44px; height: 44px; font-size: 0.9rem; }
+.lg { width: 60px; height: 60px; font-size: 1.2rem; }
+
+.blue   { background-color: #e0ecfa; color: #1c4f82; }
+.teal   { background-color: #d9f2ef; color: #19645c; }
+.violet { background-color: #ece6fb; color: #5b3fa8; }
+.amber  { background-color: #fbefd5; color: #8a5a10; }
+.rose   { background-color: #fbe3e8; color: #9c2b48; }
+.green  { background-color: #e1f3e6; color: #276b45; }
+
+/* Dark theme: translucent tints with light text */
+:global([data-theme="dark"]) .blue   { background-color: rgba(96, 165, 250, 0.18); color: #93c5fd; }
+:global([data-theme="dark"]) .teal   { background-color: rgba(45, 212, 191, 0.16); color: #5eead4; }
+:global([data-theme="dark"]) .violet { background-color: rgba(167, 139, 250, 0.18); color: #c4b5fd; }
+:global([data-theme="dark"]) .amber  { background-color: rgba(251, 191, 36, 0.16); color: #fcd34d; }
+:global([data-theme="dark"]) .rose   { background-color: rgba(251, 113, 133, 0.17); color: #fda4af; }
+:global([data-theme="dark"]) .green  { background-color: rgba(74, 222, 128, 0.15); color: #86efac; }

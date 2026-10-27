@@ -16,19 +16,37 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: #e8f0fa;
+  background-color: var(--color-primary-soft);
   color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .avatarRight {
-  background-color: #e0f0e8;
+  background-color: var(--color-success-soft);
   color: var(--color-success);
+}
+
+/* Bubble + timestamp column */
+.stack {
+  display: flex;
+  flex-direction: column;
+  max-width: 74%;
+  min-width: 0;
+}
+
+.rowLeft  .stack { align-items: flex-start; }
+.rowRight .stack { align-items: flex-end; }
+
+.time {
+  margin-top: 0.2rem;
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
 }
 
 /* Bubble */
 .bubble {
-  max-width: 74%;
+  max-width: 100%;
   padding: 0.65rem 0.95rem;
   border-radius: 16px;
   font-size: 0.93rem;
@@ -38,7 +56,7 @@
 }
 
 .assistant {
-  background-color: #ffffff;
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-bottom-left-radius: 4px;
   color: var(--color-text);
@@ -46,16 +64,17 @@
 
 .caregiver {
   background-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   border-bottom-right-radius: 4px;
 }
 
 /* Mobile — wider bubbles since chat fills the screen */
 @media (max-width: 640px) {
-  .bubble { max-width: 82%; font-size: 0.9rem; }
+  .stack { max-width: 82%; }
+  .bubble { font-size: 0.9rem; }
   .avatar { width: 24px; height: 24px; }
 }
 
 @media (max-width: 480px) {
-  .bubble { max-width: 86%; }
+  .stack { max-width: 86%; }
 }

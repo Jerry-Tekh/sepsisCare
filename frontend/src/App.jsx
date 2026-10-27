@@ -13,6 +13,7 @@ import DashboardRedirect from "./components/DashboardRedirect.jsx";
 import OrganizationDashboard from "./pages/organization/OrganizationDashboard.jsx";
 import LearningGuidesPage from "./pages/learning-guides/LearningGuidesPage.jsx";
 import MicrolearningHome from "./pages/microlearning/MicrolearningHome.jsx";
+import NotFound from "./pages/NotFound.jsx";
 
 function Protected({ children, roles }) {
   return <ProtectedRoute roles={roles}>{children}</ProtectedRoute>;
@@ -38,7 +39,7 @@ export default function App() {
       <Route path="/patients/:id/microlearning" element={<Protected roles={["CAREGIVER"]}><MicrolearningPage /></Protected>} />
 
       <Route path="/"  element={<Navigate to="/dashboard" replace />} />
-      <Route path="*"  element={<Navigate to="/dashboard" replace />} />
+      <Route path="*"  element={<NotFound />} />
     </Routes>
   );
 }

@@ -5,7 +5,7 @@ export function listMaterials(patientId) {
 }
 
 export function requestGeneration(patientId, topic) {
-  return axiosClient.post(`/patients/${patientId}/microlearning/generate`, { topic });
+  return axiosClient.post(`/patients/${patientId}/microlearning/generate`, { topic }, { slowNotice: false });
 }
 
 export function getMaterial(materialId) {
@@ -23,6 +23,7 @@ export function toggleAssign(materialId, assign) {
 export async function downloadPDF(materialId, title) {
   const res = await axiosClient.get(`/microlearning/${materialId}/download/pdf`, {
     responseType: "blob",
+    slowNotice: false,
   });
   const url  = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
   const link = document.createElement("a");
@@ -40,6 +41,7 @@ export async function downloadPDF(materialId, title) {
 export async function downloadCard(materialId, title) {
   const res = await axiosClient.get(`/microlearning/${materialId}/download/card`, {
     responseType: "blob",
+    slowNotice: false,
   });
   const url  = URL.createObjectURL(new Blob([res.data], { type: "image/svg+xml" }));
   const link = document.createElement("a");

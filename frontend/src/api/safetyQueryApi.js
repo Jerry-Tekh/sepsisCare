@@ -1,11 +1,11 @@
 import axiosClient from "./axiosClient";
 
 export function startQuery(patientId, question) {
-  return axiosClient.post(`/patients/${patientId}/safety-query/start`, { question });
+  return axiosClient.post(`/patients/${patientId}/safety-query/start`, { question }, { slowNotice: false });
 }
 
 export function sendMessage(queryId, message) {
-  return axiosClient.post(`/safety-query/${queryId}/message`, { message });
+  return axiosClient.post(`/safety-query/${queryId}/message`, { message }, { slowNotice: false });
 }
 
 export function listQueries(patientId) {

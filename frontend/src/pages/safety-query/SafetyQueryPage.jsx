@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  RiRobot2Line, RiSendPlaneFill, RiAddLine,
-} from "react-icons/ri";
-import {
-  FiUser, FiArrowLeft, FiExternalLink, FiClock,
-} from "react-icons/fi";
+import { RiRobot2Line, RiAddLine } from "react-icons/ri";
+import { FiUser, FiExternalLink, FiClock, FiSend } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import PageHeader from "../../components/common/PageHeader.jsx";
+import Button from "../../components/common/Button.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
+import ChatComposer, { JumpToLatest } from "../../components/chat/ChatComposer.jsx";
+import { formatMessageTime } from "../../components/discovery/MessageBubble.jsx";
 import ReferralAlert from "../../components/safety-query/ReferralAlert.jsx";
+import useChatScroll from "../../hooks/useChatScroll.js";
+import { apiErrorMessage } from "../../api/errors.js";
 import * as safetyQueryApi from "../../api/safetyQueryApi";
 import * as patientApi from "../../api/patientApi";
 import * as discoveryApi from "../../api/discoveryApi";
@@ -37,15 +39,8 @@ export default function SafetyQueryPage() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [activeOnboardingSession, setActiveOnboardingSession] = useState(null);
 
-  const scrollRef  = useRef(null);
   const inputRef   = useRef(null);
-
-  // Auto-scroll chat to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [activeQuery?.messages, isTyping]);
+  const { scrollRef, showJump, jumpToLatest } = useChatScroll([activeQuery?.id, activeQuery?.messages, isTyping]);
 
   // Load patient + query history
   useEffect(() => {
@@ -116,24 +111,24 @@ export default function SafetyQueryPage() {
       setStartingNew(false);
       if (data.isRedFlag) setRedFlag({ referralReason: data.referralReason });
     } catch (err) {
-      setError(err.response?.data?.error || "Could not start query.");
+      setError(apiErrorMessage(err, "Could not start query."));
     } finally {
       setSending(false);
     }
   }
 
-  async function handleSend(e) {
-    e.preventDefault();
-    if (!draft.trim() || !activeQuery || sending) return;
-    const text = draft.trim();
+  async function handleSend(text) {
+    if (!text || !activeQuery || sending) return;
     setDraft("");
     setIsTyping(true);
     setError("");
+    jumpToLatest("auto");
 
     // Optimistic CHW message
+    const tempMessageId = `tmp-${Date.now()}`;
     setActiveQuery((prev) => ({
       ...prev,
-      messages: [...prev.messages, { id: `tmp-${Date.now()}`, role: "CHW", content: text }],
+      messages: [...prev.messages, { id: tempMessageId, role: "CHW", content: text, createdAt: new Date().toISOString() }],
     }));
 
     try {
@@ -145,7 +140,10 @@ export default function SafetyQueryPage() {
       }));
       if (data.isRedFlag) setRedFlag({ referralReason: data.referralReason });
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to send message. Try again.");
+      // Not saved: remove the optimistic bubble and give the text back to retry.
+      setActiveQuery((prev) => ({ ...prev, messages: prev.messages.filter((m) => m.id !== tempMessageId) }));
+      setDraft((current) => current || text);
+      setError(apiErrorMessage(err, "Your message wasn't sent. Please try again."));
     } finally {
       setIsTyping(false);
       inputRef.current?.focus();
@@ -176,12 +174,12 @@ export default function SafetyQueryPage() {
     }
   }
 
-  if (loading) return <AppLayout><div className={styles.center}><Spinner size="lg" /></div></AppLayout>;
+  if (loading) return <AppLayout title={patient ? `Safety questions · ${patient.fullName}` : "Safety questions"}><div className={styles.center}><HeartbeatLoader label="Loading safety chat…" /></div></AppLayout>;
 
   const isBlocked = activeQuery?.status === "RED_FLAG_TRIGGERED" || activeQuery?.status === "CLOSED" || isTyping || sending;
 
   return (
-    <AppLayout>
+    <AppLayout title={patient ? `Safety questions · ${patient.fullName}` : "Safety questions"}>
       {/* Red flag full-screen interrupt */}
       {redFlag && (
         <ReferralAlert
@@ -191,29 +189,24 @@ export default function SafetyQueryPage() {
         />
       )}
 
-      {/* Page header */}
-      <div className={styles.pageHeader}>
-        <button className={styles.backBtn} onClick={() => navigate(`/patients/${patientId}`)}>
-          <FiArrowLeft size={15} /> Back to {patient?.fullName}
-        </button>
-        <h1>Safety Query</h1>
-        <p className={styles.subtitle}>
-          {hasCompletedOnboarding
-            ? <>Ask any question about safe care for <strong>{patient?.fullName}</strong>. The AI uses their completed risk assessment.</>
-            : <>Complete onboarding and the risk assessment for <strong>{patient?.fullName}</strong> before using Safety Query.</>}
-        </p>
-      </div>
+      <PageHeader
+        back={{ to: `/patients/${patientId}`, label: `Back to ${patient?.fullName || "patient"}` }}
+        title="Safety questions"
+        subtitle={hasCompletedOnboarding
+          ? <>Ask any question about safe care for <strong>{patient?.fullName}</strong>. The AI uses their completed risk assessment.</>
+          : <>Complete onboarding and the risk assessment for <strong>{patient?.fullName}</strong> first.</>}
+      />
 
-      {error && <div className={styles.errorBox}>{error}</div>}
+      {error && <div className={styles.errorBox} role="alert">{error}</div>}
 
       {!hasCompletedOnboarding ? (
         <div className={styles.emptyChat}>
           <RiRobot2Line size={48} className={styles.emptyChatIcon} />
           <h2>Onboarding required</h2>
-          <p>Complete onboarding and the risk assessment for {patient?.fullName} before starting a Safety Query.</p>
-          <button className={styles.submitBtn} onClick={continueOnboarding}>
-            <RiAddLine size={16} /> {activeOnboardingSession ? "Continue onboarding" : "Go to patient profile"}
-          </button>
+          <p>Complete onboarding and the risk assessment for {patient?.fullName} before asking safety questions.</p>
+          <Button icon={<RiAddLine size={16} />} onClick={continueOnboarding}>
+            {activeOnboardingSession ? "Continue onboarding" : "Go to patient profile"}
+          </Button>
         </div>
       ) : (
 
@@ -270,15 +263,14 @@ export default function SafetyQueryPage() {
                   onChange={(e) => setNewQuestion(e.target.value)}
                   placeholder="e.g. Is it safe to apply honey on the wound? The caregiver wants to use local herbs…"
                   rows={4}
+                  aria-label="Your question"
                   autoFocus
                 />
                 <div className={styles.newQueryActions}>
-                  <button type="button" className={styles.cancelBtn} onClick={() => setStartingNew(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className={styles.submitBtn} disabled={!newQuestion.trim() || sending}>
+                  <Button variant="secondary" onClick={() => setStartingNew(false)}>Cancel</Button>
+                  <Button type="submit" icon={<FiSend size={15} />} disabled={!newQuestion.trim() || sending}>
                     {sending ? "Sending…" : "Ask question"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -288,20 +280,22 @@ export default function SafetyQueryPage() {
           {!startingNew && !activeQuery && (
             <div className={styles.emptyChat}>
               <RiRobot2Line size={48} className={styles.emptyChatIcon} />
-              <p>Select a past query or start a new one.</p>
-              <button className={styles.submitBtn} onClick={() => setStartingNew(true)}>
-                <RiAddLine size={16} /> Ask first question
-              </button>
+              <p>{queries.length ? "Select a past question or ask a new one." : "No questions yet."}</p>
+              <Button icon={<RiAddLine size={16} />} onClick={() => setStartingNew(true)}>
+                {queries.length ? "Ask a new question" : "Ask your first question"}
+              </Button>
             </div>
           )}
 
           {/* Active chat session */}
           {activeQuery && !startingNew && (
             <>
-              <div className={styles.messages} ref={scrollRef}>
+              <div className={styles.messagesWrap}>
+              <div className={styles.messages} ref={scrollRef} role="log" aria-live="polite" aria-label="Safety conversation">
                 {activeQuery.messages.map((msg) => {
                   const isAssistant = msg.role === "ASSISTANT";
                   const meta = msg.metadata || {};
+                  const time = formatMessageTime(msg.createdAt);
                   return (
                     <div
                       key={msg.id}
@@ -312,6 +306,8 @@ export default function SafetyQueryPage() {
                           <RiRobot2Line size={15} />
                         </div>
                       )}
+                      <div className={`${styles.bubbleStack} ${isAssistant ? styles.stackLeft : styles.stackRight}`}>
+                      <span className="sr-only">{isAssistant ? "Assistant said:" : "You said:"}</span>
                       <div className={`${styles.bubble} ${isAssistant ? styles.bubbleAI : styles.bubbleCHW} ${meta.isRedFlag ? styles.bubbleRedFlag : ""}`}>
                         <p className={styles.bubbleText}>{msg.content}</p>
 
@@ -330,6 +326,8 @@ export default function SafetyQueryPage() {
                             ))}
                           </div>
                         )}
+                      </div>
+                      {time && <time className={styles.msgTime} dateTime={msg.createdAt}>{time}</time>}
                       </div>
                       {!isAssistant && (
                         <div className={`${styles.avatar} ${styles.avatarCHW}`}>
@@ -362,36 +360,26 @@ export default function SafetyQueryPage() {
                   </div>
                 )}
               </div>
+              {showJump && <JumpToLatest onClick={jumpToLatest} />}
+              </div>
 
-              {/* Input bar */}
-              <form className={styles.inputBar} onSubmit={handleSend}>
-                <input
-                  ref={inputRef}
-                  className={styles.input}
-                  type="text"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder={
-                    activeQuery.status === "RED_FLAG_TRIGGERED"
-                      ? "⚠ Red flag active — act on the referral first"
-                      : activeQuery.status === "CLOSED"
-                      ? "This session is closed"
-                      : isTyping
-                      ? "Please wait…"
-                      : "Ask a follow-up question…"
-                  }
-                  disabled={isBlocked}
-                  autoComplete="off"
-                />
-                <button
-                  type="submit"
-                  className={styles.sendBtn}
-                  disabled={isBlocked || !draft.trim()}
-                  aria-label="Send"
-                >
-                  <RiSendPlaneFill size={18} />
-                </button>
-              </form>
+              <ChatComposer
+                inputRef={inputRef}
+                value={draft}
+                onChange={setDraft}
+                onSubmit={handleSend}
+                disabled={isBlocked}
+                label="Your follow-up question"
+                placeholder={
+                  activeQuery.status === "RED_FLAG_TRIGGERED"
+                    ? "⚠ Red flag active: act on the referral first"
+                    : activeQuery.status === "CLOSED"
+                    ? "This session is closed"
+                    : isTyping
+                    ? "Please wait…"
+                    : "Ask a follow-up question… (Enter to send)"
+                }
+              />
             </>
           )}
         </section>
