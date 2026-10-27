@@ -152,3 +152,34 @@ img, video, iframe { max-width: 100%; height: auto; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Print ──────────────────────────────────────────────────
+   Paper is always light, whatever the screen theme, and interactive
+   controls are hidden. Pages add their own print tweaks. */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-alt: #f6f7f9;
+    --color-text: #111111;
+    --color-text-muted: #444444;
+    --color-border: #cccccc;
+    --color-primary: #1c4f82;
+    --color-danger: #a12a1f;
+    --color-danger-soft: #fbe9e7;
+    --color-success: #276b45;
+    --color-success-soft: #e6f4ea;
+    --color-warning: #8a5a10;
+    --color-warning-soft: #fdf3dc;
+    --shadow: none;
+    color-scheme: light;
+  }
+
+  body { font-size: 12pt; }
+
+  button { display: none !important; }
+
+  a { color: inherit; text-decoration: none; }
+
+  @page { margin: 16mm; }
+}

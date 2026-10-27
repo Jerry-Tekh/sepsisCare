@@ -5,7 +5,7 @@ import styles from "./HeartbeatLoader.module.css";
 const BEAT = (x) =>
   `L${x + 30},30 Q${x + 35},22 ${x + 40},30 L${x + 48},30 L${x + 52},36 ` +
   `L${x + 58},4 L${x + 64},54 L${x + 68},30 L${x + 80},30 Q${x + 88},18 ${x + 96},30 L${x + 120},30`;
-const ECG_PATH = `M0,30 ${BEAT(0)} ${BEAT(120)}`;
+export const ECG_PATH = `M0,30 ${BEAT(0)} ${BEAT(120)}`;
 
 /**
  * Heart-monitor style loading indicator: a faint ECG trace with a bright

@@ -1,7 +1,7 @@
 import axiosClient from "./axiosClient";
 
 export function startOnboarding(patientId) {
-  return axiosClient.post(`/patients/${patientId}/onboarding/start`);
+  return axiosClient.post(`/patients/${patientId}/onboarding/start`, null, { slowNotice: false });
 }
 
 export function getActiveOnboardingSession(patientId) {
@@ -17,5 +17,5 @@ export function listOnboardingSessions(patientId) {
 }
 
 export function submitOnboardingAnswer(sessionId, answer) {
-  return axiosClient.post(`/onboarding/${sessionId}/answer`, { answer });
+  return axiosClient.post(`/onboarding/${sessionId}/answer`, { answer }, { slowNotice: false });
 }

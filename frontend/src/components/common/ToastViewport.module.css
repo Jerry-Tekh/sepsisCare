@@ -58,3 +58,5 @@
 @media (max-width: 480px) {
   .viewport { right: 50%; transform: translateX(50%); bottom: var(--space-3); }
 }
+
+@media print { .viewport { display: none; } }

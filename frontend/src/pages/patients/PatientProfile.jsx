@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle, FiCheck,
-  FiMessageSquare, FiBookOpen, FiHelpCircle, FiMapPin,
+  FiMessageSquare, FiBookOpen, FiHelpCircle, FiMapPin, FiPrinter,
 } from "react-icons/fi";
 import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -158,6 +158,11 @@ export default function PatientProfile() {
     <AppLayout title={patient?.fullName || "Patient"}>
       <Link to="/patients" className={styles.backLink}>← All patients</Link>
 
+      {/* Only appears on paper (see @media print) */}
+      <p className={styles.printHeader}>
+        SepsisGuard patient summary · Printed {new Date().toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}
+      </p>
+
       {/* ── Header ──────────────────────────────────────────── */}
       <header className={styles.pageHeader}>
         <div className={styles.headerLeft}>
@@ -177,6 +182,14 @@ export default function PatientProfile() {
           </div>
         </div>
         <div className={styles.headerActions}>
+          <Button
+            variant="secondary"
+            icon={<FiPrinter size={14} />}
+            onClick={() => window.print()}
+            title={riskData ? "Print a summary for clinic visits" : "Print patient details"}
+          >
+            Print
+          </Button>
           <Button to={`/patients/${id}/edit`} variant="secondary" icon={<FiEdit2 size={14} />}>Edit</Button>
           <Button icon={nextStep.icon} onClick={nextStep.onClick} disabled={starting}>{nextStep.label}</Button>
         </div>

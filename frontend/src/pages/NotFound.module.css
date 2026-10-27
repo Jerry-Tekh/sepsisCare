@@ -1,0 +1,60 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 460px;
+  text-align: center;
+}
+
+.monitor { width: min(320px, 80vw); height: 70px; overflow: visible; }
+
+/* Draws once, left to right, then holds on the flat line. */
+.trace {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  vector-effect: non-scaling-stroke;
+  animation: draw 2.2s ease-out forwards;
+}
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.code {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--color-primary);
+}
+
+.title { margin: var(--space-2) 0 0; }
+
+.text {
+  margin: var(--space-2) 0 var(--space-6);
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trace { animation: none; stroke-dashoffset: 0; }
+}

@@ -7,6 +7,7 @@ import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
 import { ConfirmProvider } from "./context/ConfirmContext.jsx";
 import ToastViewport from "./components/common/ToastViewport.jsx";
+import ServerStatusBanner from "./components/common/ServerStatusBanner.jsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -18,6 +19,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <AuthProvider>
               <App />
               <ToastViewport />
+              <ServerStatusBanner />
             </AuthProvider>
           </ConfirmProvider>
         </ToastProvider>

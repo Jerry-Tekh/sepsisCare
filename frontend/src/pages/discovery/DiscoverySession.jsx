@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiAlertTriangle, FiArrowLeft, FiCheckCircle } from "react-icons/fi";
+import { FiAlertTriangle, FiCheckCircle } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
+import PageHeader from "../../components/common/PageHeader.jsx";
+import { apiErrorMessage } from "../../api/errors.js";
 import ChatWindow from "../../components/discovery/ChatWindow.jsx";
 import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import Button from "../../components/common/Button.jsx";
@@ -26,7 +28,9 @@ export default function DiscoverySession() {
   const [loading,    setLoading]    = useState(true);
   const [isTyping,   setIsTyping]   = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [error,      setError]      = useState("");
+  // loadError means there's no chat to show; sendError is shown above a chat that stays usable.
+  const [loadError,  setLoadError]  = useState("");
+  const [sendError,  setSendError]  = useState("");
 
   const loadSession = useCallback(async (id) => {
     const { data } = await discoveryApi.getOnboardingSession(id);
@@ -44,7 +48,7 @@ export default function DiscoverySession() {
         if (!sid) {
           const { data } = await discoveryApi.getActiveOnboardingSession(patientId);
           if (!data.session) {
-            setError("No active onboarding session found. Start one from the patient profile.");
+            setLoadError("No active onboarding session found. Start one from the patient profile.");
             return;
           }
           sid = data.session.id;
@@ -53,7 +57,7 @@ export default function DiscoverySession() {
         setSessionId(sid);
         await loadSession(sid);
       } catch {
-        if (!cancelled) setError("Could not load the onboarding session.");
+        if (!cancelled) setLoadError("Could not load the onboarding session.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -64,13 +68,15 @@ export default function DiscoverySession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
+  // Returns false on failure so ChatWindow can put the answer back in the box.
   async function handleSend(answerText) {
-    if (!sessionId) return;
+    if (!sessionId) return false;
 
     // Optimistic caregiver bubble so the UI feels instant
-    setMessages((prev) => [...prev, { id: nextTempId(), role: "CAREGIVER", content: answerText }]);
+    const tempMessageId = nextTempId();
+    setMessages((prev) => [...prev, { id: tempMessageId, role: "CAREGIVER", content: answerText, createdAt: new Date().toISOString() }]);
     setIsTyping(true);
-    setError("");
+    setSendError("");
 
     try {
       const { data } = await discoveryApi.submitOnboardingAnswer(sessionId, answerText);
@@ -80,12 +86,16 @@ export default function DiscoverySession() {
         setIsTyping(false);
         // Allow the completion note to be visible briefly before redirecting
         setTimeout(() => navigate(`/patients/${patientId}`), 1500);
-        return;
+        return true;
       }
 
       setMessages((prev) => [...prev, data.message]);
+      return true;
     } catch (err) {
-      setError(err.response?.data?.error || "Something went wrong. Please try again.");
+      // The answer wasn't saved: remove its bubble and let the caregiver retry.
+      setMessages((prev) => prev.filter((m) => m.id !== tempMessageId));
+      setSendError(apiErrorMessage(err, "Your answer wasn't sent. Please try again."));
+      return false;
     } finally {
       setIsTyping(false);
     }
@@ -101,28 +111,23 @@ export default function DiscoverySession() {
 
   return (
     <AppLayout title="Onboarding">
-      {/* Page header with back navigation */}
-      <div className={styles.pageHeader}>
-        <button className={styles.backBtn} onClick={() => navigate(`/patients/${patientId}`)}>
-          <FiArrowLeft size={16} />
-          Back to patient
-        </button>
-        <h1 className={styles.heading}>Onboarding Assessment</h1>
-        <p className={styles.subtitle}>
-          Answer each question as accurately as you can. The AI will guide you through all screening areas.
-        </p>
-      </div>
+      <PageHeader
+        back={{ to: `/patients/${patientId}`, label: "Back to patient" }}
+        title="Onboarding assessment"
+        subtitle="Answer each question as accurately as you can. The AI will guide you through all screening areas. Your progress is saved after every answer."
+      />
 
-      {/* Error state */}
-      {error && (
-        <div className={styles.errorBox}>
+      {(loadError || sendError) && (
+        <div className={styles.errorBox} role="alert">
           <FiAlertTriangle size={17} />
-          <span>{error}</span>
+          <span>{loadError || sendError}</span>
         </div>
       )}
 
+      {loadError && <Button to={`/patients/${patientId}`} variant="secondary">Back to patient</Button>}
+
       {/* Chat window */}
-      {!error && (
+      {!loadError && (
         <ChatWindow
           messages={messages}
           onSend={handleSend}

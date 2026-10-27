@@ -1,0 +1,54 @@
+.region {
+  position: fixed;
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  width: min(520px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  pointer-events: auto;
+  animation: drop 0.2s ease-out;
+}
+
+.banner strong { color: var(--color-warning); }
+
+/* Pulsing amber dot */
+.dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background-color: var(--color-warning);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(183, 121, 31, 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(183, 121, 31, 0); }
+}
+
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Clear the mobile top bar */
+@media (max-width: 900px) {
+  .region { top: 66px; }
+}
+
+@media print { .region { display: none; } }

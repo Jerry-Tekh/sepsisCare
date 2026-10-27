@@ -264,3 +264,27 @@
   .headerActions { width: 100%; }
   .headerActions > * { flex: 1; }
 }
+
+/* ── Print: a clean one-page summary for clinic visits ───── */
+.printHeader { display: none; }
+
+@media print {
+  .printHeader {
+    display: block;
+    margin: 0 0 var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid #999;
+    font-size: 0.8rem;
+    color: #444;
+  }
+
+  .backLink,
+  .headerActions,
+  .journey,
+  .sideCol,
+  .placeholder button { display: none !important; }
+
+  .grid { display: block; }
+  .pageHeader { margin-bottom: var(--space-4); }
+  .referralBox, .sepsisHero, .riskRow { break-inside: avoid; }
+}
