@@ -5,7 +5,7 @@ import AppLayout from "../../components/common/AppLayout.jsx";
 import Card from "../../components/common/Card.jsx";
 import Input from "../../components/common/Input.jsx";
 import Button from "../../components/common/Button.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import * as patientApi from "../../api/patientApi";
 import styles from "./PatientForm.module.css";
 
@@ -74,7 +74,7 @@ export default function PatientForm() {
   if (loading) {
     return (
       <AppLayout>
-        <div className={styles.center}><Spinner size="lg" /></div>
+        <div className={styles.center}><HeartbeatLoader label="Loading patient details…" /></div>
       </AppLayout>
     );
   }

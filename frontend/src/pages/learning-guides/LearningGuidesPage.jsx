@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiBookOpen, FiDownload, FiExternalLink, FiSearch } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import * as guidesApi from "../../api/learningGuidesApi";
 import styles from "./LearningGuidesPage.module.css";
 
@@ -111,7 +111,7 @@ export default function LearningGuidesPage() {
       <div className={styles.resultsHeader}><h2>Available guides</h2><span>{total} guide{total === 1 ? "" : "s"}</span></div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {pdfError && <p className={styles.error} role="alert">{pdfError}</p>}
-      {loading ? <div className={styles.loading}><Spinner size="lg" /></div> : guides.length === 0 ? (
+      {loading ? <div className={styles.loading}><HeartbeatLoader label="Loading guides…" /></div> : guides.length === 0 ? (
         <div className={styles.empty}><FiBookOpen size={34} /><h3>No guides found</h3><p>Try another search or filter combination.</p></div>
       ) : (
         <div className={styles.grid}>

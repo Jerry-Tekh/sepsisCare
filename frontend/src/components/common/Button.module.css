@@ -14,19 +14,20 @@
   transition: background-color 0.15s ease, opacity 0.15s ease;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
+  text-decoration: none; /* when rendered as a link */
 }
 
 .button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btnIcon { display: flex; align-items: center; font-size: 1em; }
 
-.primary { background-color: var(--color-primary); color: #fff; }
+.primary { background-color: var(--color-primary); color: var(--color-on-primary); }
 .primary:hover:not(:disabled) { background-color: var(--color-primary-dark); }
 
 .secondary { background-color: transparent; border-color: var(--color-border); color: var(--color-text); }
 .secondary:hover:not(:disabled) { background-color: var(--color-bg); }
 
-.danger { background-color: var(--color-danger); color: #fff; }
+.danger { background-color: var(--color-danger); color: var(--color-on-primary); }
 .danger:hover:not(:disabled) { opacity: 0.88; }
 
 .fullWidth { width: 100%; }

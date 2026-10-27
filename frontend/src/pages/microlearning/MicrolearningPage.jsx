@@ -7,6 +7,7 @@ import {
 import { RiMedicineBottleLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import MaterialDetail from "./MaterialDetail.jsx";
 import * as microlearningApi from "../../api/microlearningApi";
 import * as patientApi from "../../api/patientApi";
@@ -119,7 +120,7 @@ export default function MicrolearningPage() {
   const recommended = materials.filter((m) => !m.isAssigned && m.isAutoRecommended);
   const others     = materials.filter((m) => !m.isAssigned && !m.isAutoRecommended);
 
-  if (loading) return <AppLayout><div className={styles.center}><Spinner size="lg" /></div></AppLayout>;
+  if (loading) return <AppLayout><div className={styles.center}><HeartbeatLoader label="Loading care guides…" /></div></AppLayout>;
 
   return (
     <AppLayout>

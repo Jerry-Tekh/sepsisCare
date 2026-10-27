@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle,
-  FiUser, FiClipboard, FiMessageSquare,
-  FiBookOpen, FiHelpCircle,
+  FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle, FiCheck,
+  FiMessageSquare, FiBookOpen, FiHelpCircle, FiMapPin,
 } from "react-icons/fi";
 import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
-import Badge from "../../components/common/Badge.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import Avatar from "../../components/common/Avatar.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
+import RiskBadge from "../../components/patients/RiskBadge.jsx";
 import ConversationHistory from "../../components/discovery/ConversationHistory.jsx";
 import * as patientApi      from "../../api/patientApi";
 import * as discoveryApi    from "../../api/discoveryApi";
@@ -18,6 +18,17 @@ import * as riskApi         from "../../api/riskApi";
 import * as safetyQueryApi  from "../../api/safetyQueryApi";
 import * as microlearningApi from "../../api/microlearningApi";
 import styles from "./PatientProfile.module.css";
+
+const RISK_ROWS = [
+  { key: "infection_risk",       label: "Infection" },
+  { key: "pressure_injury_risk", label: "Pressure injury" },
+  { key: "environmental_risk",   label: "Environmental" },
+  { key: "caregiver_burden",     label: "Caregiver burden" },
+];
+
+function formatDate(iso) {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
+}
 
 export default function PatientProfile() {
   const { id }   = useParams();
@@ -79,10 +90,14 @@ export default function PatientProfile() {
     }
   }
 
+  function continueOnboarding() {
+    navigate(`/patients/${id}/onboarding`, { state: { sessionId: activeSession.id } });
+  }
+
   if (loading) {
     return (
       <AppLayout>
-        <div className={styles.loadingCenter}><Spinner size="lg" /></div>
+        <div className={styles.loadingCenter}><HeartbeatLoader label="Loading patient…" /></div>
       </AppLayout>
     );
   }
@@ -90,10 +105,11 @@ export default function PatientProfile() {
   if (error && !patient) {
     return (
       <AppLayout>
-        <div className={styles.errorBox}>
+        <div className={styles.errorBox} role="alert">
           <FiAlertTriangle size={20} />
           {error}
         </div>
+        <Link to="/patients" className={styles.backLink}>Back to patients</Link>
       </AppLayout>
     );
   }
@@ -101,179 +117,217 @@ export default function PatientProfile() {
   if (!patient) return null;
 
   const riskData = riskProfile?.riskData;
+  const sepsis = riskData?.sepsis_risk || null;
   const hasCompletedOnboarding = sessions.some((session) => session.status === "COMPLETED") && Boolean(riskProfile);
+  const hasRedFlag = safetyQueries.some((q) => q.status === "RED_FLAG_TRIGGERED");
+  const assignedCount = materials.filter((m) => m.isAssigned).length;
+
+  // Care journey: onboarding → risk assessment → ongoing care.
+  const steps = [
+    {
+      label: "Onboarding",
+      detail: activeSession ? "In progress" : hasCompletedOnboarding || riskProfile ? "Completed" : "Not started",
+      done: Boolean(riskProfile) && !activeSession,
+      current: !riskProfile || Boolean(activeSession),
+    },
+    {
+      label: "Risk assessment",
+      detail: riskProfile ? `Assessed ${formatDate(riskProfile.createdAt)}` : "After onboarding",
+      done: Boolean(riskProfile),
+      current: false,
+    },
+    {
+      label: "Ongoing care",
+      detail: hasCompletedOnboarding ? "Safety chat & care guides" : "Unlocks after assessment",
+      done: false,
+      current: hasCompletedOnboarding && !activeSession,
+    },
+  ];
+
+  // The single most useful thing to do next.
+  let nextStep;
+  if (activeSession) {
+    nextStep = { label: "Continue onboarding", icon: <FiArrowRight size={15} />, onClick: continueOnboarding };
+  } else if (!riskProfile) {
+    nextStep = { label: starting ? "Starting…" : "Start onboarding", icon: <FiPlay size={14} />, onClick: handleStartOnboarding };
+  } else {
+    nextStep = { label: "Ask a safety question", icon: <FiHelpCircle size={15} />, onClick: () => navigate(`/patients/${id}/safety-query`) };
+  }
 
   return (
     <AppLayout>
-      {/* Page header */}
-      <div className={styles.pageHeader}>
+      <Link to="/patients" className={styles.backLink}>← All patients</Link>
+
+      {/* ── Header ──────────────────────────────────────────── */}
+      <header className={styles.pageHeader}>
         <div className={styles.headerLeft}>
-          <div className={styles.avatar}><FiUser size={24} /></div>
-          <div>
+          <Avatar name={patient.fullName} size="lg" />
+          <div className={styles.headerText}>
             <h1 className={styles.patientName}>{patient.fullName}</h1>
             <p className={styles.patientMeta}>
               {patient.age} yrs &middot; {patient.gender} &middot; {patient.relationshipToCaregiver}
-              {patient.location && ` · ${patient.location}`}
+              {patient.location && <> &middot; <FiMapPin size={12} aria-hidden="true" /> {patient.location}</>}
             </p>
+            <div className={styles.headerBadges}>
+              <RiskBadge level={sepsis} prefix="Sepsis risk" />
+              {hasRedFlag && (
+                <span className={styles.redFlagNote}><FiAlertTriangle size={12} aria-hidden="true" /> Red flag on record</span>
+              )}
+            </div>
           </div>
         </div>
-        <Link to={`/patients/${id}/edit`}>
-          <Button variant="secondary" icon={<FiEdit2 size={14} />}>Edit</Button>
-        </Link>
-      </div>
+        <div className={styles.headerActions}>
+          <Button to={`/patients/${id}/edit`} variant="secondary" icon={<FiEdit2 size={14} />}>Edit</Button>
+          <Button icon={nextStep.icon} onClick={nextStep.onClick} disabled={starting}>{nextStep.label}</Button>
+        </div>
+      </header>
 
       {error && (
-        <div className={styles.errorBox}>
+        <div className={styles.errorBox} role="alert">
           <FiAlertTriangle size={16} /> {error}
         </div>
       )}
 
-      {/* Discovery status */}
-      <Card title="Discovery Status" icon={<FiClipboard />}>
-        {activeSession ? (
-          <div className={styles.discoveryRow}>
-            <Badge tone="warning">In Progress</Badge>
-            <Button
-              icon={<FiArrowRight size={15} />}
-              onClick={() => navigate(`/patients/${id}/onboarding`, { state: { sessionId: activeSession.id } })}
-            >
-              Continue onboarding
-            </Button>
+      {/* Referral is the most urgent thing on the page, so it goes first. */}
+      {riskData?.referral_recommended && (
+        <div className={styles.referralBox} role="alert">
+          <FiAlertTriangle size={20} className={styles.referralIcon} aria-hidden="true" />
+          <div>
+            <strong>Referral recommended</strong>
+            <p>{riskData.referral_reason}</p>
           </div>
-        ) : (
-          <div className={styles.discoveryRow}>
-            <Badge tone={riskProfile ? "success" : "neutral"}>
-              {riskProfile ? "Assessment Complete" : "Not Started"}
-            </Badge>
-            <Button
-              icon={<FiPlay size={14} />}
-              onClick={handleStartOnboarding}
-              disabled={starting}
-            >
-              {starting ? "Starting…" : riskProfile ? "New Assessment" : "Start Onboarding"}
-            </Button>
-          </div>
-        )}
-      </Card>
-
-      {/* Risk profile */}
-      {riskData && (
-        <Card title="Risk Assessment" icon={<RiFirstAidKitLine />}>
-          <div className={styles.riskGrid}>
-            <RiskRow label="Infection risk"       value={riskData.infection_risk} />
-            <RiskRow label="Sepsis risk"           value={riskData.sepsis_risk} />
-            <RiskRow label="Pressure injury risk"  value={riskData.pressure_injury_risk} />
-            <RiskRow label="Environmental risk"    value={riskData.environmental_risk} />
-            <RiskRow label="Caregiver burden"      value={riskData.caregiver_burden} />
-          </div>
-
-          {riskData.referral_recommended && (
-            <div className={styles.referralBox}>
-              <FiAlertTriangle size={16} className={styles.referralIcon} />
-              <div>
-                <strong>Referral recommended</strong>
-                <p>{riskData.referral_reason}</p>
-              </div>
-            </div>
-          )}
-
-          {riskData.known_conditions?.length > 0 && (
-            <p className={styles.conditionLine}>
-              <strong>Known:</strong> {riskData.known_conditions.join(", ")}
-            </p>
-          )}
-          {riskData.possible_hidden_conditions?.length > 0 && (
-            <p className={styles.conditionLine}>
-              <strong>Possible:</strong> {riskData.possible_hidden_conditions.join(", ")}
-            </p>
-          )}
-
-          <p className={styles.summary}>{riskData.summary}</p>
-          <p className={styles.disclaimer}>
-            Screening aid only — not a clinical diagnosis. Consult a clinician for evaluation.
-          </p>
-        </Card>
+        </div>
       )}
 
-      {/* Conversation history */}
-      <Card title="Conversation History" icon={<FiMessageSquare />}>
-        <ConversationHistory sessions={sessions} />
-      </Card>
+      {/* ── Care journey ────────────────────────────────────── */}
+      <ol className={styles.journey} aria-label="Care journey">
+        {steps.map((step, i) => (
+          <li
+            key={step.label}
+            className={`${styles.step} ${step.done ? styles.stepDone : ""} ${step.current ? styles.stepCurrent : ""}`}
+            aria-current={step.current ? "step" : undefined}
+          >
+            <span className={styles.stepMarker} aria-hidden="true">
+              {step.done ? <FiCheck size={14} /> : i + 1}
+            </span>
+            <span className={styles.stepText}>
+              <span className={styles.stepLabel}>{step.label}</span>
+              <span className={styles.stepDetail}>{step.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
 
-      {/* Safety Query */}
-      <Card title="Safety Query" icon={<RiQuestionAnswerLine />}>
-        <div className={styles.featureRow}>
-          <div className={styles.featureInfo}>
+      <div className={styles.grid}>
+        {/* ── Main column ───────────────────────────────────── */}
+        <div className={styles.mainCol}>
+          <Card title="Risk assessment" icon={<RiFirstAidKitLine />}>
+            {riskData ? (
+              <>
+                <div className={styles.sepsisHero}>
+                  <span className={styles.sepsisLabel}>Sepsis risk</span>
+                  <RiskBadge level={sepsis} />
+                </div>
+                <div className={styles.riskGrid}>
+                  {RISK_ROWS.map(({ key, label }) => (
+                    <div key={key} className={styles.riskRow}>
+                      <span className={styles.riskLabel}>{label}</span>
+                      <RiskBadge level={riskData[key]} />
+                    </div>
+                  ))}
+                </div>
+
+                {riskData.known_conditions?.length > 0 && (
+                  <p className={styles.conditionLine}>
+                    <strong>Known conditions:</strong> {riskData.known_conditions.join(", ")}
+                  </p>
+                )}
+                {riskData.possible_hidden_conditions?.length > 0 && (
+                  <p className={styles.conditionLine}>
+                    <strong>Possible conditions:</strong> {riskData.possible_hidden_conditions.join(", ")}
+                  </p>
+                )}
+
+                {riskData.summary && <p className={styles.summary}>{riskData.summary}</p>}
+                <p className={styles.disclaimer}>
+                  Screening aid only, not a clinical diagnosis. Consult a clinician for evaluation.
+                </p>
+              </>
+            ) : (
+              <div className={styles.placeholder}>
+                <p>
+                  {activeSession
+                    ? "Finish the onboarding conversation to generate this patient's risk assessment."
+                    : "Start onboarding: a short guided conversation that produces a personalised sepsis risk assessment."}
+                </p>
+                <Button
+                  icon={activeSession ? <FiArrowRight size={15} /> : <FiPlay size={14} />}
+                  onClick={activeSession ? continueOnboarding : handleStartOnboarding}
+                  disabled={starting}
+                >
+                  {activeSession ? "Continue onboarding" : starting ? "Starting…" : "Start onboarding"}
+                </Button>
+              </div>
+            )}
+          </Card>
+
+          <Card
+            title="Onboarding conversations"
+            icon={<FiMessageSquare />}
+            actions={riskProfile && !activeSession && (
+              <Button variant="secondary" icon={<FiPlay size={13} />} onClick={handleStartOnboarding} disabled={starting}>
+                {starting ? "Starting…" : "New assessment"}
+              </Button>
+            )}
+          >
+            <ConversationHistory sessions={sessions} />
+          </Card>
+        </div>
+
+        {/* ── Side column ───────────────────────────────────── */}
+        <div className={styles.sideCol}>
+          <Card title="Safety questions" icon={<RiQuestionAnswerLine />}>
             <p className={styles.featureDesc}>
               {hasCompletedOnboarding
-                ? `Ask the AI any question about safe care for ${patient?.fullName}.`
-                : "Complete onboarding and the risk assessment before starting a Safety Query for this patient."}
-              {hasCompletedOnboarding && " The AI will alert you if it detects a red flag."}
+                ? `Ask the AI about safe care for ${patient.fullName}. It will alert you if it detects a red flag.`
+                : "Available once onboarding and the risk assessment are complete."}
             </p>
             {safetyQueries.length > 0 && (
               <p className={styles.featureMeta}>
-                {safetyQueries.length} past {safetyQueries.length === 1 ? "query" : "queries"}
-                {safetyQueries.some((q) => q.status === "RED_FLAG_TRIGGERED") && (
-                  <span className={styles.redFlagNote}>
-                    <FiAlertTriangle size={12} /> Red flag on record
-                  </span>
-                )}
+                {safetyQueries.length} past {safetyQueries.length === 1 ? "question" : "questions"}
               </p>
             )}
-          </div>
-          <Button
-            icon={<FiHelpCircle size={15} />}
-            onClick={() => {
-              if (hasCompletedOnboarding) {
-                navigate(`/patients/${id}/safety-query`);
-              } else if (activeSession) {
-                navigate(`/patients/${id}/onboarding`, { state: { sessionId: activeSession.id } });
-              } else {
-                handleStartOnboarding();
-              }
-            }}
-            disabled={!hasCompletedOnboarding && starting}
-          >
-            {hasCompletedOnboarding
-              ? (safetyQueries.length > 0 ? "Open safety chat" : "Start asking")
-              : activeSession ? "Continue onboarding" : starting ? "Starting onboarding…" : "Start onboarding"}
-          </Button>
-        </div>
-      </Card>
+            <Button
+              variant={hasCompletedOnboarding ? "primary" : "secondary"}
+              icon={<FiHelpCircle size={15} />}
+              disabled={!hasCompletedOnboarding}
+              onClick={() => navigate(`/patients/${id}/safety-query`)}
+              fullWidth
+            >
+              {safetyQueries.length > 0 ? "Open safety chat" : "Start asking"}
+            </Button>
+          </Card>
 
-      {/* Microlearning */}
-      <Card title="Care Guides" icon={<FiBookOpen />}>
-        <div className={styles.featureRow}>
-          <div className={styles.featureInfo}>
+          <Card title="Care guides" icon={<FiBookOpen />}>
             <p className={styles.featureDesc}>
-              Patient-specific care guides covering wound care, infection prevention, nutrition, and more. Guides are auto-generated from the risk assessment and can be downloaded as PDFs or printable picture cards.
+              Patient-specific guides on wound care, infection prevention, nutrition and more, available as PDFs or printable picture cards.
             </p>
             {materials.length > 0 && (
               <p className={styles.featureMeta}>
-                {materials.filter((m) => m.isAssigned).length} in care plan
-                &nbsp;·&nbsp;
-                {materials.length} total {materials.length === 1 ? "guide" : "guides"}
+                {assignedCount} in care plan &middot; {materials.length} total
               </p>
             )}
-          </div>
-          <Button
-            icon={<FiBookOpen size={15} />}
-            onClick={() => navigate(`/patients/${id}/microlearning`)}
-          >
-            {materials.length > 0 ? "View guides" : "Explore library"}
-          </Button>
+            <Button
+              variant="secondary"
+              icon={<FiBookOpen size={15} />}
+              onClick={() => navigate(`/patients/${id}/microlearning`)}
+              fullWidth
+            >
+              {materials.length > 0 ? "View guides" : "Explore guides"}
+            </Button>
+          </Card>
         </div>
-      </Card>
+      </div>
     </AppLayout>
-  );
-}
-
-function RiskRow({ label, value }) {
-  const toneMap = { low: "success", moderate: "warning", high: "danger" };
-  return (
-    <div className={styles.riskRow}>
-      <span className={styles.riskLabel}>{label}</span>
-      <Badge tone={toneMap[value]}>{value}</Badge>
-    </div>
   );
 }

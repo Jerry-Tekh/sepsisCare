@@ -89,7 +89,7 @@
 }
 
 .navLinkActive {
-  background-color: #e8f0fa;
+  background-color: var(--color-primary-soft);
   color: var(--color-primary);
 }
 
@@ -127,11 +127,31 @@
 
 .logoutButton:hover { background-color: var(--color-bg); }
 
+.themeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.themeToggle:hover { background-color: var(--color-bg); color: var(--color-primary); }
+
+/* Icon-only on desktop; the text label shows in the mobile menu. */
+.themeToggleText { display: none; }
+
 /* ── Page content ─────────────────────────────────────────── */
 .content {
   flex: 1;
   width: 100%;
-  max-width: 980px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 1.75rem 1.5rem;
 }
@@ -188,6 +208,9 @@
   .userName { max-width: 55%; font-size: 0.88rem; }
 
   .logoutButton { font-size: 0.88rem; }
+
+  .themeToggle { width: auto; padding: 0.38rem 0.8rem; font-size: 0.88rem; font-weight: 600; color: var(--color-text); }
+  .themeToggleText { display: inline; }
 
   .content { padding: 1rem 0.875rem; }
 }

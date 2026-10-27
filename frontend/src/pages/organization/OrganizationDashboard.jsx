@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { FiBookOpen, FiCheckCircle, FiExternalLink, FiGlobe, FiPlus, FiTrash2, FiUpload } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import Spinner from "../../components/common/Spinner.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
 import * as orgApi from "../../api/organizationGuidesApi";
 import styles from "./OrganizationDashboard.module.css";
 
@@ -10,6 +12,7 @@ const blankSource = { name: "", url: "", notes: "", approve: false };
 
 export default function OrganizationDashboard() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [tab, setTab] = useState("guides");
   const [guides, setGuides] = useState([]);
   const [sources, setSources] = useState([]);
@@ -90,13 +93,25 @@ export default function OrganizationDashboard() {
   }
 
   async function removeGuide(item) {
-    if (!window.confirm(`Delete “${item.title}”?`)) return;
+    const ok = await confirm({
+      title: `Delete “${item.title}”?`,
+      message: "Caregivers will no longer be able to open this guide. This cannot be undone.",
+      confirmLabel: "Delete guide",
+      danger: true,
+    });
+    if (!ok) return;
     try { await orgApi.deleteGuide(item.id); await loadData(); }
     catch (err) { setError(err.response?.data?.error || "Could not delete the guide."); }
   }
 
   async function removeSource(item) {
-    if (!window.confirm(`Delete source “${item.name}”? It will be detached from any guides.`)) return;
+    const ok = await confirm({
+      title: `Delete source “${item.name}”?`,
+      message: "It will be detached from any guides that use it. This cannot be undone.",
+      confirmLabel: "Delete source",
+      danger: true,
+    });
+    if (!ok) return;
     try { await orgApi.deleteSource(item.id); await loadData(); }
     catch (err) { setError(err.response?.data?.error || "Could not delete the source."); }
   }
@@ -110,7 +125,7 @@ export default function OrganizationDashboard() {
       <div className={styles.stats}><div><strong>{guides.length}</strong><span>Guides</span></div><div><strong>{guides.filter((item) => item.status === "PUBLISHED").length}</strong><span>Published</span></div><div><strong>{sources.filter((item) => item.status === "APPROVED").length}</strong><span>Approved sources</span></div></div>
       <div className={styles.tabs} role="tablist" aria-label="Organization content"><button role="tab" aria-selected={tab === "guides"} className={tab === "guides" ? styles.activeTab : ""} onClick={() => setTab("guides")}><FiBookOpen /> Learning guides</button><button role="tab" aria-selected={tab === "sources"} className={tab === "sources" ? styles.activeTab : ""} onClick={() => setTab("sources")}><FiGlobe /> Verified sources</button></div>
       {error && <p className={styles.error} role="alert">{error}</p>}{notice && <p className={styles.notice} role="status">{notice}</p>}
-      {loading ? <div className={styles.loading}><Spinner size="lg" /></div> : tab === "guides" ? (
+      {loading ? <div className={styles.loading}><HeartbeatLoader label="Loading your workspace…" /></div> : tab === "guides" ? (
         <div className={styles.contentGrid}>
           <form className={styles.formCard} onSubmit={handleUpload}>
             <h2><FiUpload /> Upload a guide</h2>

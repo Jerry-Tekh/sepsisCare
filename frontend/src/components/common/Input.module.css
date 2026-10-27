@@ -53,7 +53,7 @@
 
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 166, 0.12);
+  box-shadow: var(--focus-ring);
 }
 
 /* Padding adjustments when adornments are present */

@@ -1,5 +1,10 @@
+import { Link } from "react-router-dom";
 import styles from "./Button.module.css";
 
+/**
+ * Pass `to` to render a router link styled as a button. Wrapping a <Button>
+ * in a <Link> nests a button inside a link, which is invalid HTML.
+ */
 export default function Button({
   children,
   variant = "primary",
@@ -8,6 +13,8 @@ export default function Button({
   onClick,
   fullWidth = false,
   icon = null,
+  to,
+  ...rest
 }) {
   const classNames = [
     styles.button,
@@ -15,10 +22,20 @@ export default function Button({
     fullWidth ? styles.fullWidth : "",
   ].filter(Boolean).join(" ");
 
-  return (
-    <button type={type} className={classNames} disabled={disabled} onClick={onClick}>
+  const content = (
+    <>
       {icon && <span className={styles.btnIcon}>{icon}</span>}
       {children}
+    </>
+  );
+
+  if (to) {
+    return <Link to={to} className={classNames} onClick={onClick} {...rest}>{content}</Link>;
+  }
+
+  return (
+    <button type={type} className={classNames} disabled={disabled} onClick={onClick} {...rest}>
+      {content}
     </button>
   );
 }

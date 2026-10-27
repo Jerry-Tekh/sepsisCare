@@ -1,17 +1,95 @@
 :root {
+  /* ── Colour ─────────────────────────────────────────────── */
   --color-bg:           #f5f7fa;
   --color-surface:      #ffffff;
+  --color-surface-alt:  #f8fafc;
   --color-primary:      #2563a6;
   --color-primary-dark: #1c4f82;
+  --color-primary-soft: #e8f0fa;
+  --color-on-primary:   #ffffff; /* text on primary/danger/success fills */
   --color-text:         #1f2937;
   --color-text-muted:   #6b7280;
   --color-border:       #e2e8f0;
+  --color-border-strong:#cbd5e1;
+
+  /* Status colours: text/icon colour + tinted background */
   --color-danger:       #c0392b;
+  --color-danger-soft:  #fbe9e7;
   --color-success:      #2f855a;
+  --color-success-soft: #e6f4ea;
   --color-warning:      #b7791f;
-  --radius:             10px;
-  --shadow:             0 1px 3px rgba(0, 0, 0, 0.08);
+  --color-warning-soft: #fdf3dc;
+
+  --color-primary-border: #bfdbfe;
+  --color-danger-border:  #fca5a5;
+
+  /* Heart-monitor trace used by the loading animation */
+  --color-pulse:        #16a34a;
+
+  color-scheme: light;
+
+  /* ── Spacing scale ──────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* ── Type scale ─────────────────────────────────────────── */
+  --text-xs:   0.75rem;
+  --text-sm:   0.85rem;
+  --text-base: 0.95rem;
+  --text-lg:   1.1rem;
+
+  /* ── Shape & depth ──────────────────────────────────────── */
+  --radius:     10px;
+  --radius-sm:  6px;
+  --radius-lg:  14px;
+  --shadow:     0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg:  0 10px 30px rgba(15, 23, 42, 0.15);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 166, 0.35);
+
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ── Dark theme ─────────────────────────────────────────────
+   ThemeContext sets data-theme on <html> (system preference by default,
+   or the user's saved choice). Only tokens change here; components read
+   the tokens, so they pick up the theme automatically. */
+:root[data-theme="dark"] {
+  --color-bg:           #0b1220;
+  --color-surface:      #131c2e;
+  --color-surface-alt:  #182337;
+  /* Brighter blue so brand, links and icons read clearly on navy; fills
+     that use it switch to dark text (--color-on-primary) to stay legible. */
+  --color-primary:      #6aa8ec;
+  --color-primary-dark: #8bbcf2; /* hover goes lighter on dark backgrounds */
+  --color-primary-soft: rgba(106, 168, 236, 0.16);
+  --color-on-primary:   #0b1220;
+  --color-text:         #e5e7eb;
+  --color-text-muted:   #9ca3af;
+  --color-border:       #253149;
+  --color-border-strong:#35435e;
+
+  --color-danger:       #ef5350;
+  --color-danger-soft:  rgba(239, 83, 80, 0.15);
+  --color-success:      #4ade80;
+  --color-success-soft: rgba(74, 222, 128, 0.13);
+  --color-warning:      #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.14);
+
+  --color-primary-border: rgba(106, 168, 236, 0.45);
+  --color-danger-border:  rgba(239, 83, 80, 0.5);
+
+  --color-pulse:        #22c55e;
+
+  --shadow:     0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg:  0 10px 30px rgba(0, 0, 0, 0.55);
+  --focus-ring: 0 0 0 3px rgba(106, 168, 236, 0.5);
+
+  color-scheme: dark;
 }
 
 * {
@@ -31,6 +109,7 @@ body,
 body {
   font-size: 15px;
   line-height: 1.5;
+  transition: background-color 0.2s ease, color 0.2s ease;
   -webkit-text-size-adjust: 100%; /* prevent iOS font size inflation */
 }
 
@@ -43,5 +122,33 @@ button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; font-size: inherit; }
 a { color: var(--color-primary); }
 
+/* Visible focus for keyboard users only */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
 /* Prevent content overflow on tiny screens */
 img, video, iframe { max-width: 100%; height: auto; }
+
+/* Visually hidden but still read by screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

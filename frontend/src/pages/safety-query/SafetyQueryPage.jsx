@@ -7,7 +7,7 @@ import {
   FiUser, FiArrowLeft, FiExternalLink, FiClock,
 } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import ReferralAlert from "../../components/safety-query/ReferralAlert.jsx";
 import * as safetyQueryApi from "../../api/safetyQueryApi";
 import * as patientApi from "../../api/patientApi";
@@ -176,7 +176,7 @@ export default function SafetyQueryPage() {
     }
   }
 
-  if (loading) return <AppLayout><div className={styles.center}><Spinner size="lg" /></div></AppLayout>;
+  if (loading) return <AppLayout><div className={styles.center}><HeartbeatLoader label="Loading safety chat…" /></div></AppLayout>;
 
   const isBlocked = activeQuery?.status === "RED_FLAG_TRIGGERED" || activeQuery?.status === "CLOSED" || isTyping || sending;
 

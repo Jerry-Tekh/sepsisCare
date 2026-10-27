@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiAlertTriangle, FiArrowLeft, FiCheckCircle } from "react-icons/fi";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import ChatWindow from "../../components/discovery/ChatWindow.jsx";
-import Spinner from "../../components/common/Spinner.jsx";
+import HeartbeatLoader from "../../components/common/HeartbeatLoader.jsx";
 import Button from "../../components/common/Button.jsx";
 import * as discoveryApi from "../../api/discoveryApi";
 import styles from "./DiscoverySession.module.css";
@@ -94,7 +94,7 @@ export default function DiscoverySession() {
   if (loading) {
     return (
       <AppLayout>
-        <div className={styles.center}><Spinner size="lg" /></div>
+        <div className={styles.center}><HeartbeatLoader label="Loading conversation…" /></div>
       </AppLayout>
     );
   }
