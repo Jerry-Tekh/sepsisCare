@@ -23,3 +23,7 @@ export function deletePatient(id) {
 export function getDashboardSummary() {
   return axiosClient.get("/dashboard/summary");
 }
+
+export function getDashboardWelcome() {
+  return axiosClient.get("/dashboard/welcome");
+}

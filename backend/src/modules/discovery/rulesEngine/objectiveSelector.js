@@ -7,8 +7,8 @@ const pathwaysConfig = require("./pathways.config");
  *
  * Iterates pathways in the order they were activated (oldest first) and,
  * within a pathway, in the objective order defined in pathways.config.js.
- * This guarantees deterministic question ordering — Gemini never picks
- * the order, it only phrases the question for the objective it's given.
+ * Legacy pathway utility retained for interpreting and scoring older sessions.
+ * The skill-led Render agent now selects questions for new onboarding flows.
  */
 function selectNextObjective(activePatientPathways) {
   for (const pp of activePatientPathways) {

@@ -1,5 +1,6 @@
 const prisma = require("../../config/prismaClient");
-const geminiService = require("../discovery/gemini/gemini.service");
+const agentClient = require("../../services/agentClient.service");
+const discoveryService = require("../discovery/discovery.service");
 const { NotFoundError, BadRequestError } = require("../../errors/AppError");
 
 async function assertOnboardingCompleted(patientId) {
@@ -19,6 +20,28 @@ async function assertOnboardingCompleted(patientId) {
       "Complete onboarding and wait for the patient risk assessment before using Safety Query."
     );
   }
+}
+
+function directRedFlag(text) {
+  const value = String(text || "").toLowerCase();
+  const patterns = [
+    /\b(unresponsive|barely responding|cannot be woken|can't be woken|not waking|hard to wake|loss of consciousness|unconscious|seizure|convulsion)\b/,
+    /\b(difficulty breathing|struggling to breathe|labou?red breathing|blue lips|blue fingertips|new sudden headache)\b/,
+    /\b(chest pain|facial droop|stroke|uncontrolled bleeding|bleeding won't stop|diabetic emergency)\b/,
+    /\b(confusion|confused|altered consciousness)\b/,
+    /\b(rapid breathing|very fast breathing|cold clammy skin|weak rapid pulse|shock)\b/,
+    /\b(very low blood sugar|very high blood sugar|rapidly worsening|refusal to eat or drink|unable to eat or drink)\b/,
+  ];
+  return patterns.some((pattern) => {
+    const match = pattern.exec(value);
+    if (!match || match.index === undefined) return false;
+    const before = value.slice(Math.max(0, match.index - 36), match.index);
+    return !/\b(no|not|without|denies|denied|never|isn't|aren't|doesn't|don't)\b(?:\s+\w+){0,4}\s*$/i.test(before);
+  });
+}
+
+function materialTitles(materials, ids = []) {
+  return ids.map((id) => materials.find((material) => material.id === id)).filter(Boolean).map((material) => ({ id: material.id, title: material.title }));
 }
 
 /**
@@ -44,62 +67,49 @@ async function startQuery(patientId, caregiverId, firstQuestion) {
     select: { id: true, title: true, topic: true },
   });
 
-  // Create the query session and first CHW message in one transaction
+  const context = await discoveryService.patientContext(patientId);
+  const aiResponse = await agentClient.runAgent({
+    mode: "safety_query",
+    message: firstQuestion,
+    history: [],
+    patientContext: { patient: { fullName: patient.fullName, age: patient.age, gender: patient.gender }, riskProfile: riskProfile?.riskData || null, memory: context.memory },
+    appContext: { assignedMaterials: materials, approvedGuides: context.approvedGuides },
+  });
+  const isRedFlag = aiResponse.isRedFlag || directRedFlag(firstQuestion);
+  const referralReason = aiResponse.referralReason || (isRedFlag ? "A potentially urgent warning sign was reported. Contact a clinician or emergency service now." : null);
+  await discoveryService.persistAgentUpdates(patientId, {
+    ...aiResponse,
+    flag: aiResponse.flag || (isRedFlag ? { title: "Urgent warning sign reported", evidence: [firstQuestion], epistemic: "suspected", doctorAsk: referralReason, preventionTaken: [] } : null),
+  });
+  const linkedMaterials = materialTitles(materials, aiResponse.linkedMaterialIds);
+
+  // If AI detected a red flag, update session status
+  const sessionStatus = isRedFlag ? "RED_FLAG_TRIGGERED" : "OPEN";
+
   const query = await prisma.safetyQuery.create({
     data: {
       patientId,
       caregiverId,
       title: firstQuestion.slice(0, 80),
-      status: "OPEN",
-      messages: {
-        create: {
-          role: "CHW",
-          content: firstQuestion,
-        },
-      },
+      status: sessionStatus,
+      messages: { create: [
+        { role: "CHW", content: firstQuestion },
+        { role: "ASSISTANT", content: aiResponse.reply, metadata: {
+          isRedFlag, referralReason,
+          linkedMaterialIds: linkedMaterials.map((material) => material.id),
+          linkedMaterialTitles: linkedMaterials.map((material) => material.title),
+        } },
+      ] },
     },
-    include: { messages: true },
+    include: { messages: { orderBy: { createdAt: "asc" } } },
   });
 
-  // Get the AI answer
-  const aiResponse = await geminiService.answerSafetyQuery({
-    patient,
-    riskProfile: riskProfile?.riskData || null,
-    assignedMaterials: materials,
-    conversationHistory: [{ role: "CHW", content: firstQuestion }],
-    latestQuestion: firstQuestion,
-  });
-
-  // If AI detected a red flag, update session status
-  const sessionStatus = aiResponse.isRedFlag ? "RED_FLAG_TRIGGERED" : "OPEN";
-
-  const [, assistantMessage] = await prisma.$transaction([
-    prisma.safetyQuery.update({
-      where: { id: query.id },
-      data: { status: sessionStatus },
-    }),
-    prisma.safetyQueryMessage.create({
-      data: {
-        queryId: query.id,
-        role: "ASSISTANT",
-        content: aiResponse.answer,
-        metadata: {
-          isRedFlag: aiResponse.isRedFlag,
-          referralReason: aiResponse.referralReason || null,
-          linkedMaterialIds: aiResponse.linkedMaterialIds || [],
-          linkedMaterialTitles: aiResponse.linkedMaterialTitles || [],
-        },
-      },
-    }),
-  ]);
-
-  // Return the full query with all messages for the frontend
   const fullQuery = await prisma.safetyQuery.findUnique({
     where: { id: query.id },
     include: { messages: { orderBy: { createdAt: "asc" } } },
   });
 
-  return { query: fullQuery, isRedFlag: aiResponse.isRedFlag, referralReason: aiResponse.referralReason };
+  return { query: fullQuery, isRedFlag, referralReason };
 }
 
 /**
@@ -139,49 +149,51 @@ async function sendMessage(queryId, messageText, patientId) {
     select: { id: true, title: true, topic: true },
   });
 
-  // Store the CHW message
-  await prisma.safetyQueryMessage.create({
-    data: { queryId, role: "CHW", content: messageText },
+  const history = query.messages.map((m) => ({ role: m.role === "CHW" ? "user" : "assistant", content: m.content }));
+
+  const context = await discoveryService.patientContext(patientId);
+  const aiResponse = await agentClient.runAgent({
+    mode: "safety_query",
+    message: messageText,
+    history,
+    patientContext: { patient: { fullName: patient.fullName, age: patient.age, gender: patient.gender }, riskProfile, memory: context.memory },
+    appContext: { assignedMaterials: materials, approvedGuides: context.approvedGuides },
   });
-
-  // Build conversation history for AI
-  const history = query.messages.map((m) => ({ role: m.role, content: m.content }));
-  history.push({ role: "CHW", content: messageText });
-
-  const aiResponse = await geminiService.answerSafetyQuery({
-    patient,
-    riskProfile,
-    assignedMaterials: materials,
-    conversationHistory: history,
-    latestQuestion: messageText,
+  const isRedFlag = aiResponse.isRedFlag || directRedFlag(messageText);
+  const referralReason = aiResponse.referralReason || (isRedFlag ? "A potentially urgent warning sign was reported. Contact a clinician or emergency service now." : null);
+  await discoveryService.persistAgentUpdates(patientId, {
+    ...aiResponse,
+    flag: aiResponse.flag || (isRedFlag ? { title: "Urgent warning sign reported", evidence: [messageText], epistemic: "suspected", doctorAsk: referralReason, preventionTaken: [] } : null),
   });
+  const linkedMaterials = materialTitles(materials, aiResponse.linkedMaterialIds);
 
-  const sessionStatus = aiResponse.isRedFlag ? "RED_FLAG_TRIGGERED" : "OPEN";
+  const sessionStatus = isRedFlag ? "RED_FLAG_TRIGGERED" : "OPEN";
 
   // Use a transaction so the status update and assistant message are atomic.
   // If either fails, neither is committed — preventing a session stuck with
   // an updated status but no corresponding AI response message.
-  const [, assistantMessage] = await prisma.$transaction([
+  const [, caregiverMessage, assistantMessage] = await prisma.$transaction([
     prisma.safetyQuery.update({
       where: { id: queryId },
       data: { status: sessionStatus },
     }),
+    prisma.safetyQueryMessage.create({ data: { queryId, role: "CHW", content: messageText } }),
     prisma.safetyQueryMessage.create({
       data: {
         queryId,
         role: "ASSISTANT",
-        content: aiResponse.answer,
+        content: aiResponse.reply,
         metadata: {
-          isRedFlag: aiResponse.isRedFlag,
-          referralReason: aiResponse.referralReason || null,
-          linkedMaterialIds: aiResponse.linkedMaterialIds || [],
-          linkedMaterialTitles: aiResponse.linkedMaterialTitles || [],
+          isRedFlag,
+          referralReason,
+          linkedMaterialIds: linkedMaterials.map((material) => material.id),
+          linkedMaterialTitles: linkedMaterials.map((material) => material.title),
         },
       },
     }),
   ]);
 
-  return { message: assistantMessage, isRedFlag: aiResponse.isRedFlag, referralReason: aiResponse.referralReason };
+  return { message: assistantMessage, isRedFlag, referralReason };
 }
 
 /**

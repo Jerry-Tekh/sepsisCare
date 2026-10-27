@@ -1,13 +1,7 @@
 require("dotenv").config();
 
-const required = ["DATABASE_URL", "JWT_SECRET", "GEMINI_API_KEY"];
+const required = ["DATABASE_URL", "JWT_SECRET", "AGENT_BASE_URL", "AGENT_SHARED_SECRET"];
 const missing = required.filter((key) => !process.env[key]);
-if (process.env.GEMINI_API_KEY === "YOUR_GEMINI_KEY") {
-  missing.push("GEMINI_API_KEY (replace placeholder)");
-}
-if (process.env.GEMINI_MODEL === "YOUR_GEMINI_MODEL") {
-  missing.push("GEMINI_MODEL (replace placeholder)");
-}
 
 if (missing.length > 0) {
   console.error(
@@ -44,8 +38,8 @@ module.exports = {
   databaseUrl:   process.env.DATABASE_URL,
   jwtSecret:     process.env.JWT_SECRET,
   jwtExpiresIn,
-  geminiApiKey:  process.env.GEMINI_API_KEY,
-  geminiModel:   process.env.GEMINI_MODEL || "gemini-2.5-pro",
+  agentUrl: process.env.AGENT_BASE_URL || "",
+  agentSharedSecret: process.env.AGENT_SHARED_SECRET || "",
   objectStorageBucket: process.env.OBJECT_STORAGE_BUCKET || "",
   objectStorageRegion: process.env.OBJECT_STORAGE_REGION || "auto",
   objectStorageEndpoint: process.env.OBJECT_STORAGE_ENDPOINT || "",

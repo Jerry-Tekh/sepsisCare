@@ -1,6 +1,6 @@
 const { z } = require("zod");
 
-const riskLevelEnum = z.enum(["low", "moderate", "high"]);
+const riskLevelEnum = z.enum(["unknown", "low", "moderate", "high"]);
 
 const riskProfileSchema = z.object({
   known_conditions: z.array(z.string()),
@@ -13,6 +13,7 @@ const riskProfileSchema = z.object({
   referral_recommended: z.boolean(),
   referral_reason: z.string(),
   summary: z.string(),
+  assessment_coverage: z.object({ knownFacts: z.number().int().nonnegative(), unknownFacts: z.array(z.string()).default([]) }).optional(),
 });
 
 module.exports = { riskProfileSchema, riskLevelEnum };

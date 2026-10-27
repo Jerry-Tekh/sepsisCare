@@ -15,7 +15,7 @@ This system helps caregivers and community health workers uncover hidden patient
 | Database | PostgreSQL + Prisma ORM 7 |
 | Auth | JWT stored in **httpOnly cookie** + bcrypt |
 | Validation | Zod 4 |
-| AI | Gemini API (Gemini 3.8 Flash, structured JSON output) |
+| AI | OpenRouter model API behind a private Render-hosted skills agent |
 | Security | Helmet, cookie-parser, express-rate-limit, compression, CORS credentials |
 
 ---
@@ -24,7 +24,7 @@ This system helps caregivers and community health workers uncover hidden patient
 
 - Node.js 20 LTS or newer
 - PostgreSQL 14+ running locally or accessible via connection string
-- A Gemini API key from Google AI Studio
+- An OpenRouter API key and a Render service for the agent
 
 ---
 
@@ -35,7 +35,7 @@ This system helps caregivers and community health workers uncover hidden patient
 ```bash
 cd backend
 cp .env.example .env
-# Fill in: DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
+# Fill in: DATABASE_URL, JWT_SECRET, AGENT_BASE_URL, AGENT_SHARED_SECRET
 
 npm install
 npx prisma migrate dev --name init
@@ -96,10 +96,10 @@ CORS is configured with `credentials: true` and an explicit allowed origin. All 
 ## MVP Walkthrough
 
 1. Register a caregiver account → log in.
-2. Create Patient A → start onboarding → answer AI-generated questions.
-3. Onboarding completes when all activated clinical pathways are satisfied → Risk Profile generated automatically.
+2. Create Patient A → start skill-led onboarding → the Render agent chooses a gentle next question from the conversation and patient record.
+3. When the agent completes the onboarding round, the backend builds a deterministic Risk Profile; unanswered risk fields remain `unknown`.
 4. Caregivers can browse published organization learning guides; patient-specific Microlearning remains a separate feature.
-5. Create Patient B → fully separate conversation, pathways, and risk profile. View risk profiles and conversation history from each patient's page; see aggregate stats on the dashboard.
+5. Create Patient B → separate agent memory, conversations, care plans, and risk profile. Review onboarding, safety conversations, clinician flags, and versioned care plans from the patient profile.
 
 ### Roles and organization learning guides
 
@@ -134,6 +134,12 @@ npm start                   # node src/server.js — no file watching
 
 Point your platform's health check at `GET /health`.
 
+### Render-hosted skills agent
+
+Create a second Render Web Service from this same repository. Leave **Root Directory** blank so the service can read `backend/skills`. Set its build command to `npm install --prefix backend/agent` and start command to `npm start --prefix backend/agent`. Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `AGENT_SHARED_SECRET` in the agent service. Set `AGENT_BASE_URL` and the same `AGENT_SHARED_SECRET` in the existing backend service. Keep the OpenRouter key only on the agent service. The agent's `/health` endpoint is its health check.
+
+Before deploying the backend release, apply the new schema migration with `npx prisma migrate deploy` from `backend/`. The migration adds durable agent memory, care-plan revisions and check-ins, clinician flags, and resumable plan conversations.
+
 The app trusts the first proxy hop (`trust proxy 1`) for correct client IPs behind a load balancer — standard on Render, Railway, Heroku, Nginx, AWS ALB. Adjust if you have multiple chained proxies.
 
 TLS/HTTPS termination happens at the hosting platform or reverse proxy — the app does not terminate TLS itself, but the `Secure` cookie flag ensures tokens are only sent over HTTPS in production.
@@ -161,11 +167,11 @@ Deploy `frontend/dist/` to any static host (Vercel, Netlify, Cloudflare Pages, S
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string. e.g. `postgresql://user:pass@host:5432/db?schema=public`. Add `?sslmode=require` for most cloud providers. |
 | `JWT_SECRET` | ✅ | Long random string. Generate: `openssl rand -base64 48`. **Never reuse the example value.** Rotating this invalidates all active sessions. |
-| `GEMINI_API_KEY` | ✅ | Your Gemini API key from Google AI Studio. This app makes 2–3 API calls per onboarding answer. |
+| `AGENT_BASE_URL` | ✅ | HTTPS base URL of the separate Render agent service. |
+| `AGENT_SHARED_SECRET` | ✅ | Long random shared secret configured identically on backend and agent services. |
 | `CORS_ORIGIN` | ✅ | Exact frontend URL, e.g. `https://your-app.com`. No trailing slash. Must match exactly or the browser will block credentialed requests. |
 | `NODE_ENV` | ✅ | Set to `production` in production. Controls `Secure` and `SameSite` cookie flags, Prisma log level, and error verbosity. |
 | `JWT_EXPIRES_IN` | Optional | Token lifetime. Default: `2h`. Accepts `30m`, `8h`, `7d`, etc. Cookie `Max-Age` is derived automatically. |
-| `GEMINI_MODEL` | Optional | Default: `gemini-2.5-pro`. Check `ai.google.dev/gemini-api/docs/models` for current model availability. |
 | `PORT` | Optional | Default: `5000`. Most platforms inject this automatically. |
 | `OBJECT_STORAGE_BUCKET` | Required for guide PDFs | Private bucket name for uploaded PDFs. |
 | `OBJECT_STORAGE_REGION` | Optional | Storage region; defaults to `auto` for S3-compatible services. |

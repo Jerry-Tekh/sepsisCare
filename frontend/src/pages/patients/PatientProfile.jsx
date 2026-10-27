@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle, FiCheck,
+  FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle, FiCheck, FiClipboard,
   FiMessageSquare, FiBookOpen, FiHelpCircle, FiMapPin, FiPrinter,
 } from "react-icons/fi";
 import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
@@ -17,6 +17,7 @@ import * as discoveryApi    from "../../api/discoveryApi";
 import * as riskApi         from "../../api/riskApi";
 import * as safetyQueryApi  from "../../api/safetyQueryApi";
 import * as microlearningApi from "../../api/microlearningApi";
+import * as careWorkspaceApi from "../../api/careWorkspaceApi";
 import styles from "./PatientProfile.module.css";
 
 const RISK_ROWS = [
@@ -40,6 +41,7 @@ export default function PatientProfile() {
   const [sessions,        setSessions]        = useState([]);
   const [safetyQueries,   setSafetyQueries]   = useState([]);
   const [materials,       setMaterials]       = useState([]);
+  const [workspace,       setWorkspace]       = useState({ plans: [], flags: [] });
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState("");
   const [starting,        setStarting]        = useState(false);
@@ -50,12 +52,13 @@ export default function PatientProfile() {
     async function load() {
       setLoading(true);
       try {
-        const [patientRes, sesRes, sessionsListRes, sqRes, mlRes] = await Promise.all([
+        const [patientRes, sesRes, sessionsListRes, sqRes, mlRes, workspaceRes] = await Promise.all([
           patientApi.getPatient(id),
           discoveryApi.getActiveOnboardingSession(id),
           discoveryApi.listOnboardingSessions(id),
           safetyQueryApi.listQueries(id),
           microlearningApi.listMaterials(id),
+          careWorkspaceApi.getWorkspace(id),
         ]);
         if (cancelled) return;
         setPatient(patientRes.data.patient);
@@ -63,6 +66,7 @@ export default function PatientProfile() {
         setSessions(sessionsListRes.data.sessions);
         setSafetyQueries(sqRes.data.queries);
         setMaterials(mlRes.data.materials);
+        setWorkspace(workspaceRes.data);
 
         try {
           const riskRes = await riskApi.getLatestRiskProfile(id);
@@ -83,6 +87,13 @@ export default function PatientProfile() {
     setStarting(true);
     try {
       const { data } = await discoveryApi.startOnboarding(id);
+      if (data.status === "COMPLETED") {
+        const riskRes = await riskApi.getLatestRiskProfile(id);
+        setRiskProfile(riskRes.data.riskProfile);
+        setSessions((previous) => [data.session, ...previous]);
+        setStarting(false);
+        return;
+      }
       navigate(`/patients/${id}/onboarding`, { state: { sessionId: data.session.id } });
     } catch (err) {
       setError(err.response?.data?.error || "Could not start onboarding.");
@@ -339,6 +350,20 @@ export default function PatientProfile() {
               {materials.length > 0 ? "View guides" : "Explore guides"}
             </Button>
           </Card>
+
+          <Card title="Caregiver implementation plan" icon={<FiClipboard />}>
+            <p className={styles.featureDesc}>Create and revise a practical plan based on the patient's needs, your availability, check-ins, and approved guides.</p>
+            <p className={styles.featureMeta}>{workspace.plans?.length ? `Current plan: ${workspace.plans.find((plan) => plan.isCurrent)?.title || workspace.plans[0].title} · ${workspace.plans.length} saved version${workspace.plans.length === 1 ? "" : "s"}` : "No plan created yet"}</p>
+            <Button variant="secondary" icon={<FiClipboard size={15} />} onClick={() => navigate(`/patients/${id}/care-plan`)} fullWidth>
+              {workspace.plans?.length ? "Open care plan" : "Create care plan"}
+            </Button>
+          </Card>
+
+            {workspace.flags?.length > 0 && <Card title="Clinical follow-ups" icon={<FiAlertTriangle />}>
+            <p className={styles.featureDesc}>Recorded concerns for clinician review. These flags are not diagnoses.</p>
+            {workspace.flags.slice(0, 5).map((flag) => <div key={flag.id}><p className={styles.featureMeta}>{flag.title} · {flag.status.replaceAll("_", " ")}</p><p className={styles.featureDesc}>{flag.doctorAsk}</p></div>)}
+            <Link to={`/patients/${id}/care-plan`} className={styles.featureMeta}>Review follow-ups</Link>
+          </Card>}
         </div>
       </div>
     </AppLayout>
