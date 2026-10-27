@@ -93,14 +93,14 @@ export default function DiscoverySession() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout title="Onboarding">
         <div className={styles.center}><HeartbeatLoader label="Loading conversation…" /></div>
       </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <AppLayout title="Onboarding">
       {/* Page header with back navigation */}
       <div className={styles.pageHeader}>
         <button className={styles.backBtn} onClick={() => navigate(`/patients/${patientId}`)}>

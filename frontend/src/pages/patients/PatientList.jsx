@@ -67,7 +67,7 @@ export default function PatientList() {
     : `${patients.length} patient${patients.length !== 1 ? "s" : ""} in your care`;
 
   return (
-    <AppLayout>
+    <AppLayout title="Patients">
       <PageHeader
         title="Patients"
         subtitle={countLabel}

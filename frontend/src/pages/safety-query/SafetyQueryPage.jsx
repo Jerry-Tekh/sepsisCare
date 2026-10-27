@@ -176,12 +176,12 @@ export default function SafetyQueryPage() {
     }
   }
 
-  if (loading) return <AppLayout><div className={styles.center}><HeartbeatLoader label="Loading safety chat…" /></div></AppLayout>;
+  if (loading) return <AppLayout title={patient ? `Safety questions · ${patient.fullName}` : "Safety questions"}><div className={styles.center}><HeartbeatLoader label="Loading safety chat…" /></div></AppLayout>;
 
   const isBlocked = activeQuery?.status === "RED_FLAG_TRIGGERED" || activeQuery?.status === "CLOSED" || isTyping || sending;
 
   return (
-    <AppLayout>
+    <AppLayout title={patient ? `Safety questions · ${patient.fullName}` : "Safety questions"}>
       {/* Red flag full-screen interrupt */}
       {redFlag && (
         <ReferralAlert

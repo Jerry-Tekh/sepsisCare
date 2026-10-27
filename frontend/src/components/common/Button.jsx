@@ -14,12 +14,14 @@ export default function Button({
   fullWidth = false,
   icon = null,
   to,
+  className = "",
   ...rest
 }) {
   const classNames = [
     styles.button,
     styles[variant],
     fullWidth ? styles.fullWidth : "",
+    className,
   ].filter(Boolean).join(" ");
 
   const content = (

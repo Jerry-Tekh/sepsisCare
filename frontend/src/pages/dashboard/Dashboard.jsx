@@ -77,7 +77,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <AppLayout>
+    <AppLayout title="Dashboard">
       <PageHeader
         title={`${greeting()}${firstName ? `, ${firstName}` : ""}`}
         subtitle="Here's how the patients in your care are doing."

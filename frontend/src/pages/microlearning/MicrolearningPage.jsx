@@ -120,10 +120,10 @@ export default function MicrolearningPage() {
   const recommended = materials.filter((m) => !m.isAssigned && m.isAutoRecommended);
   const others     = materials.filter((m) => !m.isAssigned && !m.isAutoRecommended);
 
-  if (loading) return <AppLayout><div className={styles.center}><HeartbeatLoader label="Loading care guides…" /></div></AppLayout>;
+  if (loading) return <AppLayout title={patient ? `Care guides · ${patient.fullName}` : "Care guides"}><div className={styles.center}><HeartbeatLoader label="Loading care guides…" /></div></AppLayout>;
 
   return (
-    <AppLayout>
+    <AppLayout title={patient ? `Care guides · ${patient.fullName}` : "Care guides"}>
       <div className={styles.pageHeader}>
         <button className={styles.backBtn} onClick={() => navigate(`/patients/${patientId}`)}>
           <FiArrowLeft size={15} /> Back to {patient?.fullName}

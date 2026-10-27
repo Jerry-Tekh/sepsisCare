@@ -96,7 +96,7 @@ export default function PatientProfile() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout title={patient?.fullName || "Patient"}>
         <div className={styles.loadingCenter}><HeartbeatLoader label="Loading patient…" /></div>
       </AppLayout>
     );
@@ -104,7 +104,7 @@ export default function PatientProfile() {
 
   if (error && !patient) {
     return (
-      <AppLayout>
+      <AppLayout title={patient?.fullName || "Patient"}>
         <div className={styles.errorBox} role="alert">
           <FiAlertTriangle size={20} />
           {error}
@@ -155,7 +155,7 @@ export default function PatientProfile() {
   }
 
   return (
-    <AppLayout>
+    <AppLayout title={patient?.fullName || "Patient"}>
       <Link to="/patients" className={styles.backLink}>← All patients</Link>
 
       {/* ── Header ──────────────────────────────────────────── */}

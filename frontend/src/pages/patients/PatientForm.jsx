@@ -73,14 +73,14 @@ export default function PatientForm() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout title={isEditing ? "Edit patient" : "Add patient"}>
         <div className={styles.center}><HeartbeatLoader label="Loading patient details…" /></div>
       </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <AppLayout title={isEditing ? "Edit patient" : "Add patient"}>
       <div className={styles.pageHeader}>
         <h1>{isEditing ? "Edit Patient" : "New Patient"}</h1>
         <p className={styles.subtitle}>
