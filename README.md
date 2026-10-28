@@ -138,7 +138,7 @@ Point your platform's health check at `GET /health`.
 
 Create a second Render Web Service from this same repository. Leave **Root Directory** blank so the service can read `backend/skills`. Set its build command to `npm install --prefix backend/agent` and start command to `npm start --prefix backend/agent`. Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `AGENT_SHARED_SECRET` in the agent service. Set `AGENT_BASE_URL` and the same `AGENT_SHARED_SECRET` in the existing backend service. Keep the OpenRouter key only on the agent service. The agent's `/health` endpoint is its health check.
 
-Before deploying the backend release, apply the new schema migration with `npx prisma migrate deploy` from `backend/`. The migration adds durable agent memory, care-plan revisions and check-ins, clinician flags, and resumable plan conversations.
+Before deploying the backend release, apply the new schema migration with `npx prisma migrate deploy` from `backend/`. The migration adds healthcare-seeking event records, including separate warning-sign recognition, facility-arrival, and app-entry timestamps. Patient profiles calculate elapsed time to arrival and a median across that patient's completed episodes. This is a monitoring measure; it must never delay urgent care.
 
 The app trusts the first proxy hop (`trust proxy 1`) for correct client IPs behind a load balancer — standard on Render, Railway, Heroku, Nginx, AWS ALB. Adjust if you have multiple chained proxies.
 

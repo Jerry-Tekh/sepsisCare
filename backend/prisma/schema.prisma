@@ -51,6 +51,7 @@ model User {
   addedSources    VerifiedSource[]        @relation("SourceCreator")
   approvedSources VerifiedSource[]        @relation("SourceApprover")
   patients        Patient[]
+  recordedHealthcareSeekingEvents HealthcareSeekingEvent[] @relation("HealthcareSeekingRecorder")
   safetyQueries   SafetyQuery[]           @relation("UserSafetyQueries")
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
@@ -145,6 +146,7 @@ model Patient {
   carePlanConversations   CarePlanConversation[]
   carePlanCheckIns        CarePlanCheckIn[]
   careFlags               CareFlag[]
+  healthcareSeekingEvents HealthcareSeekingEvent[]
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
@@ -396,4 +398,23 @@ model CareFlag {
 
   @@index([patientId, status, createdAt])
   @@map("care_flags")
+}
+
+// Reported events measure the interval from warning-sign recognition to
+// arrival at care. createdAt/arrivalRecordedAt capture entry times separately.
+model HealthcareSeekingEvent {
+  id                String   @id @default(uuid())
+  patientId         String
+  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  recordedById      String?
+  recordedBy        User?    @relation("HealthcareSeekingRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  recognizedAt      DateTime
+  arrivedAt         DateTime?
+  arrivalRecordedAt DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([patientId, recognizedAt])
+  @@index([recordedById, createdAt])
+  @@map("healthcare_seeking_events")
 }

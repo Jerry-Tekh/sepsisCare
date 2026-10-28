@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FiEdit2, FiPlay, FiArrowRight, FiAlertTriangle, FiCheck, FiClipboard,
-  FiMessageSquare, FiBookOpen, FiHelpCircle, FiMapPin, FiPrinter,
+  FiMessageSquare, FiBookOpen, FiHelpCircle, FiMapPin, FiPrinter, FiClock,
 } from "react-icons/fi";
 import { RiFirstAidKitLine, RiQuestionAnswerLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -31,6 +31,30 @@ function formatDate(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
 }
 
+function toLocalDateTimeValue(date = new Date()) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function formatDateTime(iso) {
+  return iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Not recorded";
+}
+
+function formatElapsed(minutes) {
+  const total = Math.max(0, Math.round(minutes));
+  const days = Math.floor(total / 1440);
+  const hours = Math.floor((total % 1440) / 60);
+  const mins = total % 60;
+  return [days ? `${days} d` : null, hours ? `${hours} h` : null, `${mins} min`].filter(Boolean).join(" ");
+}
+
+function median(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
 export default function PatientProfile() {
   const { id }   = useParams();
   const navigate = useNavigate();
@@ -42,6 +66,12 @@ export default function PatientProfile() {
   const [safetyQueries,   setSafetyQueries]   = useState([]);
   const [materials,       setMaterials]       = useState([]);
   const [workspace,       setWorkspace]       = useState({ plans: [], flags: [] });
+  const [seekingEvents,   setSeekingEvents]   = useState([]);
+  const [recognizedInput, setRecognizedInput] = useState(toLocalDateTimeValue());
+  const [arrivalInputs,   setArrivalInputs]   = useState({});
+  const [seekingSaving,   setSeekingSaving]   = useState(false);
+  const [arrivalSavingId, setArrivalSavingId] = useState(null);
+  const [seekingError,    setSeekingError]    = useState("");
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState("");
   const [starting,        setStarting]        = useState(false);
@@ -52,13 +82,14 @@ export default function PatientProfile() {
     async function load() {
       setLoading(true);
       try {
-        const [patientRes, sesRes, sessionsListRes, sqRes, mlRes, workspaceRes] = await Promise.all([
+        const [patientRes, sesRes, sessionsListRes, sqRes, mlRes, workspaceRes, seekingRes] = await Promise.all([
           patientApi.getPatient(id),
           discoveryApi.getActiveOnboardingSession(id),
           discoveryApi.listOnboardingSessions(id),
           safetyQueryApi.listQueries(id),
           microlearningApi.listMaterials(id),
           careWorkspaceApi.getWorkspace(id),
+          patientApi.listHealthcareSeekingEvents(id),
         ]);
         if (cancelled) return;
         setPatient(patientRes.data.patient);
@@ -67,6 +98,7 @@ export default function PatientProfile() {
         setSafetyQueries(sqRes.data.queries);
         setMaterials(mlRes.data.materials);
         setWorkspace(workspaceRes.data);
+        setSeekingEvents(seekingRes.data.events);
 
         try {
           const riskRes = await riskApi.getLatestRiskProfile(id);
@@ -82,6 +114,38 @@ export default function PatientProfile() {
     load();
     return () => { cancelled = true; };
   }, [id]);
+
+  async function handleRecordWarningSign(event) {
+    event.preventDefault();
+    if (!recognizedInput) return;
+    setSeekingSaving(true);
+    setSeekingError("");
+    try {
+      await patientApi.recordWarningSign(id, { recognizedAt: new Date(recognizedInput).toISOString() });
+      const { data } = await patientApi.listHealthcareSeekingEvents(id);
+      setSeekingEvents(data.events);
+      setRecognizedInput(toLocalDateTimeValue());
+    } catch (err) {
+      setSeekingError(err.response?.data?.error || "Could not save the warning-sign time.");
+    } finally {
+      setSeekingSaving(false);
+    }
+  }
+
+  async function handleRecordArrival(eventId) {
+    const value = arrivalInputs[eventId] || toLocalDateTimeValue();
+    setArrivalSavingId(eventId);
+    setSeekingError("");
+    try {
+      await patientApi.recordHealthcareArrival(id, eventId, { arrivedAt: new Date(value).toISOString() });
+      const { data } = await patientApi.listHealthcareSeekingEvents(id);
+      setSeekingEvents(data.events);
+    } catch (err) {
+      setSeekingError(err.response?.data?.error || "Could not save the facility-arrival time.");
+    } finally {
+      setArrivalSavingId(null);
+    }
+  }
 
   async function handleStartOnboarding() {
     setStarting(true);
@@ -310,6 +374,51 @@ export default function PatientProfile() {
 
         {/* ── Side column ───────────────────────────────────── */}
         <div className={styles.sideCol}>
+          <Card title="Time to healthcare-seeking" icon={<FiClock aria-hidden="true" />}>
+            <p className={styles.featureDesc}>
+              Record when a warning sign was noticed and when the patient reached a healthcare facility. The app keeps event times separate from when each time was entered.
+            </p>
+            <p className={styles.seekingSafetyNote}>
+              This is a study and monitoring measure. Do not wait to record it or meet a target before seeking urgent care. For severe or worsening signs, get urgent medical help now.
+            </p>
+            {seekingError && <p className={styles.seekingError} role="alert">{seekingError}</p>}
+            <form className={styles.seekingForm} onSubmit={handleRecordWarningSign}>
+              <label htmlFor="warning-sign-recognized">When was the warning sign first noticed?</label>
+              <input id="warning-sign-recognized" type="datetime-local" value={recognizedInput} max={toLocalDateTimeValue()} onChange={(e) => setRecognizedInput(e.target.value)} required />
+              <Button type="submit" variant="secondary" disabled={seekingSaving || !recognizedInput} fullWidth>
+                {seekingSaving ? "Saving…" : "Record warning sign"}
+              </Button>
+            </form>
+            {(() => {
+              const completedMinutes = seekingEvents.filter((item) => item.arrivedAt).map((item) => (new Date(item.arrivedAt) - new Date(item.recognizedAt)) / 60_000);
+              const typical = median(completedMinutes);
+              return typical === null ? null : <p className={styles.seekingSummary}>Median for {completedMinutes.length} completed episode{completedMinutes.length === 1 ? "" : "s"}: <strong>{formatElapsed(typical)}</strong></p>;
+            })()}
+            {seekingEvents.length === 0 ? (
+              <p className={styles.featureMeta}>No warning-sign episodes recorded yet.</p>
+            ) : (
+              <ul className={styles.seekingList}>
+                {seekingEvents.map((item) => {
+                  const elapsed = item.arrivedAt ? (new Date(item.arrivedAt) - new Date(item.recognizedAt)) / 60_000 : null;
+                  return (
+                    <li key={item.id} className={styles.seekingItem}>
+                      <strong>{elapsed === null ? "Arrival not recorded" : `Time to arrival: ${formatElapsed(elapsed)}`}</strong>
+                      <span>Warning sign noticed: {formatDateTime(item.recognizedAt)}</span>
+                      <span className={styles.seekingRecordedAt}>Warning-sign time entered: {formatDateTime(item.createdAt)}</span>
+                      {item.arrivedAt && <span>Arrived at facility: {formatDateTime(item.arrivedAt)}</span>}
+                      {item.arrivalRecordedAt && <span className={styles.seekingRecordedAt}>Arrival time entered: {formatDateTime(item.arrivalRecordedAt)}</span>}
+                      <label htmlFor={`facility-arrival-${item.id}`}>{item.arrivedAt ? "Correct facility-arrival time" : "When did the patient arrive?"}</label>
+                      <input id={`facility-arrival-${item.id}`} type="datetime-local" min={toLocalDateTimeValue(new Date(item.recognizedAt))} max={toLocalDateTimeValue()} value={arrivalInputs[item.id] || (item.arrivedAt ? toLocalDateTimeValue(new Date(item.arrivedAt)) : toLocalDateTimeValue())} onChange={(e) => setArrivalInputs((previous) => ({ ...previous, [item.id]: e.target.value }))} />
+                      <Button variant="secondary" disabled={arrivalSavingId === item.id} onClick={() => handleRecordArrival(item.id)} fullWidth>
+                        {arrivalSavingId === item.id ? "Saving…" : item.arrivedAt ? "Update arrival time" : "Record facility arrival"}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+
           <Card title="Safety questions" icon={<RiQuestionAnswerLine />}>
             <p className={styles.featureDesc}>
               {hasCompletedOnboarding
