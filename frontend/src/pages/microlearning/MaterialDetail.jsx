@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FiBookmark, FiDownload, FiCheckCircle, FiAlertTriangle,
   FiStar, FiEye, FiFileText, FiImage,
@@ -186,6 +187,15 @@ export default function MaterialDetail({ material, onToggleAssign, assigning }) 
                   <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.name}</a>
                 ))}
                 <p>Review the source with a clinician when making care decisions.</p>
+              </div>
+            )}
+            {content.learningMaterialsUsed?.length > 0 && (
+              <div className={styles.sourcesBox}>
+                <h3>Learning guides used</h3>
+                {content.learningMaterialsUsed.map((guide) => (
+                  <p key={guide.id}><strong>{guide.title}</strong>{guide.organization ? ` · ${guide.organization}` : ""}</p>
+                ))}
+                <p>These published guides were available to the agent as optional topic context. <Link to="/learning-guides">Browse learning guides</Link>.</p>
               </div>
             )}
           </div>

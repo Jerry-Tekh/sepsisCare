@@ -6,6 +6,17 @@ const { NotFoundError } = require("../../errors/AppError");
 const logger = require("../../utils/logger");
 const learningGuideService = require("../learning-guides/learning-guides.service");
 
+async function learningContextForTopic(topic) {
+  const learningMaterials = await learningGuideService.getRelevantLearningMaterialsForTopic(topic);
+  const approvedSources = new Map();
+  for (const guide of learningMaterials) {
+    for (const source of guide.sources) {
+      if (source.url && !approvedSources.has(source.url)) approvedSources.set(source.url, source);
+    }
+  }
+  return { learningMaterials, sources: [...approvedSources.values()].slice(0, 5) };
+}
+
 /**
  * Auto-generates recommended microlearning materials based on a completed risk profile.
  * Called automatically by risk.service.js after every risk profile is saved.
@@ -28,8 +39,8 @@ async function autoGenerateForRiskProfile(patientId, riskData) {
       });
       if (existing) continue;
 
-      const sources = await learningGuideService.getApprovedSourcesForTopic(planItem.topic);
-      const contentData = await generateOneMaterial({ patient, riskData, planItem, sources });
+      const learningContext = await learningContextForTopic(planItem.topic);
+      const contentData = await generateOneMaterial({ patient, riskData, planItem, ...learningContext });
 
       await prisma.microlearningMaterial.create({
         data: {
@@ -72,8 +83,8 @@ async function requestGeneration(patientId, topic) {
     triggerContext: "CHW manual request",
   };
 
-  const sources = await learningGuideService.getApprovedSourcesForTopic(topic);
-  const contentData = await generateOneMaterial({ patient, riskData, planItem, sources });
+  const learningContext = await learningContextForTopic(topic);
+  const contentData = await generateOneMaterial({ patient, riskData, planItem, ...learningContext });
 
   return prisma.microlearningMaterial.create({
     data: {

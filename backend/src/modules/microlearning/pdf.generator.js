@@ -150,6 +150,18 @@ function generateMaterialPDF(material, patient) {
          .text("Review source material with a clinician when making care decisions.", { width: CONTENT_WIDTH });
     }
 
+    if (Array.isArray(contentData.learningMaterialsUsed) && contentData.learningMaterialsUsed.length > 0) {
+      doc.moveDown(0.8);
+      sectionHeader(doc, "Published Learning Guides Used", BRAND_COLOR);
+      contentData.learningMaterialsUsed.forEach((guide) => {
+        doc.fillColor(BRAND_COLOR)
+           .fontSize(9)
+           .font("Helvetica")
+           .text(`${guide.title}${guide.organization ? ` — ${guide.organization}` : ""}`, { width: CONTENT_WIDTH });
+        doc.moveDown(0.2);
+      });
+    }
+
     // ── Footer on all pages ──────────────────────────────────────────
     const pageCount = doc.bufferedPageRange().count;
     for (let i = 0; i < pageCount; i++) {

@@ -74,28 +74,48 @@ async function getDownloadUrl(guideId, download = false) {
   return { url, expiresIn: 300 };
 }
 
-async function getApprovedSourcesForTopic(topic) {
+async function getRelevantLearningMaterialsForTopic(topic) {
+  const searchText = topic.replace(/_/g, " ");
   const guides = await prisma.learningGuide.findMany({
     where: {
       status: "PUBLISHED",
       OR: [
-        { title: { contains: topic.replace(/_/g, " "), mode: "insensitive" } },
-        { prognosisVector: { contains: topic.replace(/_/g, " "), mode: "insensitive" } },
-        { details: { contains: topic.replace(/_/g, " "), mode: "insensitive" } },
-        { tags: { has: topic.replace(/_/g, " ") } },
+        { title: { contains: searchText, mode: "insensitive" } },
+        { prognosisVector: { contains: searchText, mode: "insensitive" } },
+        { details: { contains: searchText, mode: "insensitive" } },
+        { tags: { has: searchText } },
       ],
-      sources: { some: { source: { status: "APPROVED" } } },
     },
-    select: { sources: { where: { source: { status: "APPROVED" } }, select: { source: { select: { name: true, url: true } } } } },
-    take: 20,
+    include: {
+      organization: { select: { name: true } },
+      sources: {
+        where: { source: { status: "APPROVED" } },
+        select: { source: { select: { name: true, url: true } } },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 5,
   });
+  return guides.map((guide) => ({
+    id: guide.id,
+    title: guide.title,
+    organization: guide.organization.name,
+    prognosisVector: guide.prognosisVector,
+    details: guide.details,
+    tags: guide.tags,
+    sources: guide.sources.map(({ source }) => source),
+  }));
+}
+
+async function getApprovedSourcesForTopic(topic) {
+  const guides = await getRelevantLearningMaterialsForTopic(topic);
   const unique = new Map();
   for (const guide of guides) {
-    for (const { source } of guide.sources) {
+    for (const source of guide.sources) {
       if (source?.url && !unique.has(source.url)) unique.set(source.url, { name: source.name, url: source.url });
     }
   }
   return [...unique.values()].slice(0, 5);
 }
 
-module.exports = { listPublished, getFilterOptions, getPublishedGuide, getDownloadUrl, getApprovedSourcesForTopic };
+module.exports = { listPublished, getFilterOptions, getPublishedGuide, getDownloadUrl, getApprovedSourcesForTopic, getRelevantLearningMaterialsForTopic };
