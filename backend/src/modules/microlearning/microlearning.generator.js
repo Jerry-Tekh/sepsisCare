@@ -89,15 +89,37 @@ function buildMaterialPlan(riskData) {
  * Generates all materials for a plan item using the Render-hosted skills agent.
  * Returns the structured contentData object.
  */
-async function generateOneMaterial({ patient, riskData, planItem, sources = [] }) {
+async function generateOneMaterial({ patient, riskData, planItem, sources = [], learningMaterials = [] }) {
   const result = await agentClient.runAgent({
     mode: "microlearning",
     message: `Create a caregiver microlearning material about ${planItem.topic}. ${planItem.triggerContext || ""}`,
     patientContext: { patient: { fullName: patient.fullName, age: patient.age, gender: patient.gender }, riskProfile: riskData },
-    appContext: { preventionTrack: planItem.preventionTrack, targetAudience: "BOTH", approvedSources: sources, approvedSourceUrls: sources.map((source) => source.url) },
+    appContext: {
+      preventionTrack: planItem.preventionTrack,
+      targetAudience: "BOTH",
+      approvedSources: sources,
+      approvedSourceUrls: sources.map((source) => source.url),
+      availableLearningMaterials: learningMaterials.map(({ id, title, organization, prognosisVector, details, tags, sources: guideSources }) => ({
+        id,
+        title,
+        organization,
+        prognosisVector,
+        details: details.slice(0, 500),
+        tags: tags.slice(0, 10),
+        sources: guideSources,
+      })),
+    },
   });
   if (!result.material) throw new Error("Agent did not return a structured microlearning material");
-  return result.material;
+
+  const materialsById = new Map(learningMaterials.map((item) => [item.id, item]));
+  return {
+    ...result.material,
+    learningMaterialsUsed: (result.material.learningMaterialsUsed || [])
+      .map((id) => materialsById.get(id))
+      .filter(Boolean)
+      .map(({ id, title, organization }) => ({ id, title, organization })),
+  };
 }
 
 module.exports = { buildMaterialPlan, generateOneMaterial, determinePreventionTrack };
