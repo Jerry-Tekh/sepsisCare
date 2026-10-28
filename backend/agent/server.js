@@ -9,7 +9,7 @@ app.use(express.json({ limit: "256kb" }));
 const port = Number(process.env.PORT || 5100);
 const secret = process.env.AGENT_SHARED_SECRET || "";
 const apiKey = process.env.OPENROUTER_API_KEY || "";
-const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+const model = process.env.OPENROUTER_MODEL || "z-ai/glm-5.3-flash";
 const skillsRoot = path.resolve(__dirname, "../skills");
 
 const modeFiles = {
