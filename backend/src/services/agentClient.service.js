@@ -3,6 +3,28 @@ const env = require("../config/env");
 const { AppError } = require("../errors/AppError");
 const logger = require("../utils/logger");
 
+const conversationalModes = new Set(["onboarding", "safety_query"]);
+
+function unavailableResponse(mode) {
+  const reply = mode === "onboarding"
+    ? "I am having a temporary connection problem and cannot continue the assessment right now. Your message reached the system, but please try again in a little while. If the patient has severe or rapidly worsening symptoms, seek urgent medical care now."
+    : "I am having a temporary connection problem and cannot assess this concern right now. If the patient has severe or rapidly worsening symptoms, seek urgent medical care now. Please try again in a little while.";
+  return {
+    reply, nextQuestion: null, complete: false, facts: [],
+    workspaceUpdates: { experienceNotes: [], insights: [], followUps: [], resolvedFollowUps: [] },
+    plan: null, flag: null, material: null, isRedFlag: false,
+    referralReason: null, linkedMaterialIds: [], topic: null, model: null, fallback: true,
+  };
+}
+
+function returnUnavailable(mode, message) {
+  if (conversationalModes.has(mode)) {
+    logger.warn("Using safe conversational fallback because the agent is unavailable", { mode });
+    return unavailableResponse(mode);
+  }
+  throw new AppError(message, 503);
+}
+
 const agentDataSchema = z.object({
   reply: z.string().min(1).max(5000),
   nextQuestion: z.string().max(1000).nullable().optional(),
@@ -65,7 +87,7 @@ const agentDataSchema = z.object({
 
 async function runAgent({ mode, message, history = [], patientContext = {}, appContext = {} }) {
   if (!env.agentUrl || !env.agentSharedSecret) {
-    throw new AppError("The Render caregiver agent is not configured. Set AGENT_BASE_URL and AGENT_SHARED_SECRET.", 503);
+    return returnUnavailable(mode, "The caregiver agent is not configured. Set AGENT_BASE_URL and AGENT_SHARED_SECRET.");
   }
   let response;
   try {
@@ -73,13 +95,17 @@ async function runAgent({ mode, message, history = [], patientContext = {}, appC
       method: "POST",
       headers: { "Content-Type": "application/json", "x-agent-secret": env.agentSharedSecret },
       body: JSON.stringify({ mode, message, history, patientContext, appContext }),
-      signal: AbortSignal.timeout(65000),
+      signal: AbortSignal.timeout(52000),
     });
   } catch (error) {
-    throw new AppError("The caregiver agent could not be reached. Please try again shortly.", 503, { cause: error.message });
+    logger.error("Caregiver agent request failed", { mode, error: error.name || "Error", message: error.message });
+    return returnUnavailable(mode, "The caregiver agent could not be reached. Please try again shortly.");
   }
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new AppError(payload.error || "The caregiver agent is temporarily unavailable.", 503);
+  if (!response.ok) {
+    logger.warn("Caregiver agent returned an error", { mode, status: response.status, error: payload.error || "unknown error" });
+    return returnUnavailable(mode, payload.error || "The caregiver agent is temporarily unavailable.");
+  }
   const data = payload.data && typeof payload.data === "object" ? { ...payload.data } : payload.data;
   if (mode === "microlearning" && data && typeof data === "object") {
     data.plan = null;
@@ -96,7 +122,7 @@ async function runAgent({ mode, message, history = [], patientContext = {}, appC
       mode,
       issues: parsed.error.issues.map(({ path, code }) => ({ path: path.join("."), code })),
     });
-    throw new AppError("The caregiver agent returned an invalid response. Please try again.", 502);
+    return returnUnavailable(mode, "The caregiver agent returned an invalid response. Please try again.");
   }
   if (parsed.data.material) {
     const approvedUrls = new Set(appContext.approvedSourceUrls || []);
