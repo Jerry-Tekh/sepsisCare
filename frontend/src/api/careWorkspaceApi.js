@@ -4,7 +4,10 @@ export function getWorkspace(patientId) {
   return axiosClient.get(`/patients/${patientId}/care-workspace`);
 }
 export function generateCarePlan(patientId, request, conversationId) {
-  return axiosClient.post(`/patients/${patientId}/care-workspace/generate`, { request, conversationId });
+  return axiosClient.post(`/patients/${patientId}/care-workspace/generate`, {
+    request,
+    ...(conversationId ? { conversationId } : {}),
+  });
 }
 export function recordCarePlanCheckIn(patientId, planId, payload) {
   return axiosClient.post(`/patients/${patientId}/care-workspace/${planId}/check-in`, payload);

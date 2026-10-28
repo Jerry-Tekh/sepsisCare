@@ -3,7 +3,7 @@ const { z } = require("zod");
 const patientIdParamSchema = z.object({ patientId: z.string().min(1) });
 const flagIdParamSchema = z.object({ flagId: z.string().min(1) });
 const planIdParamSchema = z.object({ planId: z.string().min(1) });
-const generatePlanSchema = z.object({ request: z.string().min(3).max(2000), conversationId: z.string().min(1).optional() });
+const generatePlanSchema = z.object({ request: z.string().min(3).max(2000), conversationId: z.string().min(1).nullish() });
 const checkInSchema = z.object({
   completedTasks: z.array(z.string().max(500)).max(30).default([]),
   missedTasks: z.array(z.string().max(500)).max(30).default([]),
