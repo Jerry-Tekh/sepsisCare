@@ -11,6 +11,8 @@ const secret = process.env.AGENT_SHARED_SECRET || "";
 const apiKey = process.env.OPENROUTER_API_KEY || "";
 const model = process.env.OPENROUTER_MODEL || "z-ai/glm-5.3-flash";
 const skillsRoot = path.resolve(__dirname, "../skills");
+const OPENROUTER_TIMEOUT_MS = 24000;
+const OPENROUTER_MAX_ATTEMPTS = 2;
 
 const modeFiles = {
   onboarding: ["workflows/01_onboarding_and_instantiation.md", "workflows/04_conversation_and_fishing.md", "workflows/05_emergency_response.md", "workflows/06_beliefs_work.md", "workflows/07_spiritual_care.md", "workflows/08_compliance_support.md", "workflows/11_persistence_of_learnings.md", "workflows/12_learning_guides_usage.md", "workflows/14_timely_guidance.md", "workflows/15_app_scopes.md", "workflows/16_flags_for_review.md", "prognosis-vectors/00_README_the_information_organization_system.md", "prognosis-vectors/08_the_caregiver_first_class_entity.md", "prognosis-vectors/09_the_influencer_combination_table.md", "examples/00_README_how_to_use_the_examples.md", "examples/02_the_red_marks.md", "examples/03_the_crisis.md", "examples/04_the_confession.md", "examples/05_the_fishing_session.md"],
@@ -77,7 +79,10 @@ function extractMessage(result) {
   return "";
 }
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/health", (_req, res) => {
+  const configured = Boolean(secret && apiKey);
+  res.status(configured ? 200 : 503).json({ status: configured ? "ok" : "misconfigured", configured });
+});
 app.post("/v1/turn", async (req, res) => {
   if (!secret || req.get("x-agent-secret") !== secret) return res.status(401).json({ error: "Unauthorized" });
   if (!apiKey) return res.status(503).json({ error: "OpenRouter is not configured" });
@@ -91,27 +96,43 @@ app.post("/v1/turn", async (req, res) => {
     const messages = [{ role: "system", content: system }];
     for (const item of history.slice(-16)) if (["user", "assistant"].includes(item.role) && typeof item.content === "string") messages.push(item);
     messages.push({ role: "user", content: JSON.stringify({ message, patientContext, appContext }) });
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "https://sepsisguard.app", "X-Title": "SepsisGuard Caregiver Agent" },
-      body: JSON.stringify({
-        model, messages, temperature: 0.25, max_tokens: 2400,
-        response_format: { type: "json_object" },
-        ...(mode === "microlearning" && appContext.approvedSourceUrls?.length ? {
-          tools: [{
-            type: "openrouter:web_fetch",
-            parameters: {
-              engine: "openrouter",
-              max_content_tokens: 5000,
-              allowed_domains: [...new Set(appContext.approvedSourceUrls.map((sourceUrl) => {
-                try { return new URL(sourceUrl).hostname; } catch { return ""; }
-              }).filter(Boolean))],
-            },
-          }],
-        } : {}),
-      }),
-      signal: AbortSignal.timeout(60000),
+    const requestBody = JSON.stringify({
+      model, messages, temperature: 0.25, max_tokens: 2400,
+      response_format: { type: "json_object" },
+      ...(mode === "microlearning" && appContext.approvedSourceUrls?.length ? {
+        tools: [{
+          type: "openrouter:web_fetch",
+          parameters: {
+            engine: "openrouter",
+            max_content_tokens: 5000,
+            allowed_domains: [...new Set(appContext.approvedSourceUrls.map((sourceUrl) => {
+              try { return new URL(sourceUrl).hostname; } catch { return ""; }
+            }).filter(Boolean))],
+          },
+        }],
+      } : {}),
     });
+    let response;
+    for (let attempt = 1; attempt <= OPENROUTER_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "https://sepsisguard.app", "X-Title": "SepsisGuard Caregiver Agent" },
+          body: requestBody,
+          signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
+        });
+      } catch (error) {
+        if (attempt === OPENROUTER_MAX_ATTEMPTS) throw error;
+        console.warn("OpenRouter request failed; retrying once", { mode, error: error.name || "Error" });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+      if (response.ok || (response.status < 500 && response.status !== 429 && response.status !== 408)) break;
+      if (attempt < OPENROUTER_MAX_ATTEMPTS) {
+        console.warn("OpenRouter returned a temporary error; retrying once", { mode, status: response.status });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
     const payload = await response.json();
     if (!response.ok) {
       console.error("OpenRouter request failed", response.status, payload?.error?.message || "unknown error");
