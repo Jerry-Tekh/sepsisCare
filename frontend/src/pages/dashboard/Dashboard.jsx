@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiUsers, FiActivity, FiCheckCircle, FiArrowRight, FiBookOpen, FiUserPlus,
   FiAlertTriangle, FiAlertOctagon, FiMessageCircle, FiClipboard,
+  FiX, FiPlusCircle,
 } from "react-icons/fi";
 import { RiFirstAidKitLine } from "react-icons/ri";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -40,15 +41,26 @@ const QUICK_LINKS = [
   { to: "/microlearning",   label: "Microlearning",      icon: FiActivity },
 ];
 
+const WELCOME_ACTIONS = [
+  { to: "/patients", label: "Open a Safety Query", detail: "Choose a patient and ask a care question.", icon: FiMessageCircle },
+  { to: "/patients", label: "Create a caregiver care plan", detail: "Make a practical plan for care and your own rest.", icon: FiClipboard },
+  { to: "/microlearning", label: "Generate or view microlearning", detail: "Get short, practical learning for caregiving.", icon: FiActivity },
+  { to: "/learning-guides", label: "Browse organization guides", detail: "Open learning guides shared by your organization.", icon: FiBookOpen },
+  { to: "/patients", label: "Start patient onboarding", detail: "Choose a patient and continue their assessment.", icon: FiArrowRight },
+  { to: "/patients/new", label: "Add a patient", detail: "Create a patient record to get started.", icon: FiPlusCircle },
+];
+
 function formatDate(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—";
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const dialogRef = useRef(null);
   const [summary, setSummary] = useState(null);
   const [summaryError, setSummaryError] = useState("");
   const [agentGreeting, setAgentGreeting] = useState("");
+  const [welcomeOpen, setWelcomeOpen] = useState(true);
   const { patients, loading, error } = usePatientsWithRisk();
 
   useEffect(() => {
@@ -59,7 +71,17 @@ export default function Dashboard() {
     patientApi.getDashboardWelcome().then(({ data }) => setAgentGreeting(data.greeting || "")).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (welcomeOpen && !dialog.open) dialog.showModal();
+    if (!welcomeOpen && dialog.open) dialog.close();
+  }, [welcomeOpen]);
+
   const firstName = user?.fullName?.trim().split(/\s+/)[0] || "";
+  const welcomeIntro = agentGreeting
+    ? agentGreeting.split(/here(?:'s| is) what i can help with right now:|which of these would you like to begin with\?/i)[0].trim()
+    : `Hi ${firstName || "there"}. What would you like to achieve today? I can help you take the next step in caring for your loved one.`;
   // Referrals first, then high sepsis risk.
   const attention = patients
     .filter((p) => p.risk?.referral_recommended || sepsisLevel(p) === "high")
@@ -76,10 +98,48 @@ export default function Dashboard() {
   return (
     <AppLayout title="Dashboard">
       <PageHeader
-        title={agentGreeting || `Hi, ${firstName || "there"}. What would you like to achieve today?`}
+        title={`Hi, ${firstName || "there"}. What would you like to achieve today?`}
         subtitle="Here's how the patients in your care are doing."
-        actions={<Button to="/patients/new" icon={<FiUserPlus size={15} />}>Add patient</Button>}
+        actions={(
+          <div className={styles.headerActions}>
+            <Button variant="secondary" onClick={() => setWelcomeOpen(true)}>Open actions</Button>
+            <Button to="/patients/new" icon={<FiUserPlus size={15} />}>Add patient</Button>
+          </div>
+        )}
       />
+
+      <dialog
+        ref={dialogRef}
+        className={styles.welcomeDialog}
+        aria-labelledby="welcome-title"
+        aria-describedby="welcome-intro"
+        onClose={() => setWelcomeOpen(false)}
+        onClick={(event) => { if (event.target === event.currentTarget) setWelcomeOpen(false); }}
+      >
+        <div className={styles.welcomeContent}>
+          <div className={styles.welcomeHeader}>
+            <span className={styles.welcomeEyebrow}>SepsisCare</span>
+            <button type="button" className={styles.welcomeClose} aria-label="Close welcome actions" onClick={() => setWelcomeOpen(false)}>
+              <FiX size={20} />
+            </button>
+          </div>
+          <h2 id="welcome-title">What would you like to achieve today?</h2>
+          <p id="welcome-intro" className={styles.welcomeIntro}>{welcomeIntro}</p>
+          <nav className={styles.welcomeActions} aria-label="Caregiver actions">
+            {WELCOME_ACTIONS.map(({ to, label, detail, icon: Icon }) => (
+              <Link key={label} to={to} className={styles.welcomeAction} onClick={() => setWelcomeOpen(false)}>
+                <span className={styles.welcomeActionIcon} aria-hidden="true"><Icon size={18} /></span>
+                <span className={styles.welcomeActionText}>
+                  <strong>{label}</strong>
+                  <span>{detail}</span>
+                </span>
+                <FiArrowRight size={16} className={styles.welcomeActionArrow} aria-hidden="true" />
+              </Link>
+            ))}
+          </nav>
+          <button type="button" className={styles.welcomeDismiss} onClick={() => setWelcomeOpen(false)}>Go to dashboard</button>
+        </div>
+      </dialog>
 
       {(summaryError || error) && (
         <p className={styles.error} role="alert"><FiAlertTriangle size={15} /> {summaryError || error}</p>
@@ -210,7 +270,7 @@ export default function Dashboard() {
           <Card title="Quick links">
             <ul className={styles.quickLinks}>
               {QUICK_LINKS.map(({ to, label, icon: Icon }) => (
-                <li key={to}>
+                <li key={label}>
                   <Link to={to} className={styles.quickLink}>
                     <Icon size={16} aria-hidden="true" /> {label}
                     <FiArrowRight size={14} className={styles.chevron} aria-hidden="true" />
