@@ -30,11 +30,12 @@ Set the same `AGENT_SHARED_SECRET` for the backend and agent. Add `OPENROUTER_AP
 - `src/services/agentClient.service.js` calls the agent over the private shared-secret connection and validates its structured response.
 - `src/modules/discovery/` stores adaptive onboarding conversations and screening facts extracted by the agent. The agent selects the next question and completion point; the backend controls access, persistence, and deterministic risk calculations.
 - `src/modules/care-workspace/` stores agent memory, care-plan revisions, caregiver check-ins, and flags for clinician review.
+- `src/modules/healthcare-seeking/` records caregiver-reported warning-sign recognition and facility-arrival times, preserving when each time was entered so study measurements can be interpreted correctly.
 - Safety Query and microlearning generation also use the skills agent. Risk levels remain deterministic; missing screening facts are shown as `unknown` rather than silently treated as low.
 
 ## Render deployment
 
-Deploy the existing API from the `backend` directory as before, with database and authentication configuration. Apply migrations with `npx prisma migrate deploy`.
+Deploy the existing API from the `backend` directory as before, with database and authentication configuration. Apply migrations with `npx prisma migrate deploy`. The latest migration adds the healthcare-seeking event table used on patient profiles.
 
 Create a second Web Service from the same repository for the agent. Leave Render's **Root Directory** blank so the service can access the skill folder. Use:
 

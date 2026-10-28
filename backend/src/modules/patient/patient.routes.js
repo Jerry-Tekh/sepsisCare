@@ -2,6 +2,7 @@ const express = require("express");
 const patientController = require("./patient.controller");
 const discoveryController = require("../discovery/discovery.controller");
 const riskRoutes = require("../risk/risk.routes");
+const healthcareSeekingRoutes = require("../healthcare-seeking/healthcare-seeking.routes");
 const validate = require("../../middleware/validate.middleware");
 const {
   createPatientSchema,
@@ -24,6 +25,9 @@ router.put(
   patientController.update
 );
 router.delete("/:id", validate(patientIdParamSchema, "params"), patientController.remove);
+
+// Time-to-healthcare-seeking tracking, scoped to a caregiver-owned patient.
+router.use("/:patientId/healthcare-seeking", healthcareSeekingRoutes);
 
 // Discovery / onboarding sub-routes, scoped to a patient
 router.post(

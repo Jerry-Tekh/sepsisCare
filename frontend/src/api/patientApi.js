@@ -20,6 +20,18 @@ export function deletePatient(id) {
   return axiosClient.delete(`/patients/${id}`);
 }
 
+export function listHealthcareSeekingEvents(patientId) {
+  return axiosClient.get(`/patients/${patientId}/healthcare-seeking`);
+}
+
+export function recordWarningSign(patientId, data) {
+  return axiosClient.post(`/patients/${patientId}/healthcare-seeking`, data);
+}
+
+export function recordHealthcareArrival(patientId, eventId, data) {
+  return axiosClient.patch(`/patients/${patientId}/healthcare-seeking/${eventId}/arrival`, data);
+}
+
 export function getDashboardSummary() {
   return axiosClient.get("/dashboard/summary");
 }
