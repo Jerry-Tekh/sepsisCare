@@ -91,12 +91,13 @@ async function submitAnswer(sessionId, answerText) {
   if (session.status !== "IN_PROGRESS") throw new BadRequestError("This onboarding session is already completed");
   const context = await patientContext(session.patientId);
   const history = session.messages.map((item) => ({ role: item.role === "CAREGIVER" ? "user" : "assistant", content: item.content }));
+  const lastAssistantMessage = [...session.messages].reverse().find((item) => item.role === "ASSISTANT")?.content || null;
   const result = await agentClient.runAgent({
     mode: "onboarding",
     message: answerText,
     history,
     patientContext: { patient: { fullName: context.patient.fullName, age: context.patient.age, gender: context.patient.gender }, memory: context.memory, riskProfile: context.riskProfile },
-    appContext: { availableApprovedGuides: context.approvedGuides, validScreeningFactKeys: screeningFactKeys },
+    appContext: { availableApprovedGuides: context.approvedGuides, validScreeningFactKeys: screeningFactKeys, lastAssistantMessage },
   });
   await prisma.onboardingMessage.create({ data: { sessionId, role: "CAREGIVER", content: answerText } });
   await persistAgentUpdates(session.patientId, result);
